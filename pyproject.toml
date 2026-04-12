@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "android-pic-sort"
+version = "1.0.0"
+description = "Sort photos by creation date into year and month folders."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Thomas" }
+]
+dependencies = [
+  "pillow",
+  "exifread",
+  "tqdm",
+  "argcomplete"
+]
+
+[project.scripts]
+android-pic-sort = "src.sort_photos:main"
+
+[tool.setuptools]
+packages = ["src"]

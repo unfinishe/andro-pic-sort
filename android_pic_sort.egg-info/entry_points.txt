@@ -1,0 +1,2 @@
+[console_scripts]
+android-pic-sort = src.sort_photos:main
