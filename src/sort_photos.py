@@ -15,7 +15,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import argcomplete
 import exifread
 from tqdm import tqdm
 
@@ -268,7 +267,6 @@ def main():
         help="Enable detailed logging output"
     )
     
-    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     
     # Run sorting

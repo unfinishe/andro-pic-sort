@@ -15,8 +15,7 @@ authors = [
 dependencies = [
   "pillow",
   "exifread",
-  "tqdm",
-  "argcomplete"
+  "tqdm"
 ]
 
 [project.scripts]

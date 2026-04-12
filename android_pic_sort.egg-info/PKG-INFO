@@ -10,6 +10,7 @@ License-File: LICENSE
 Requires-Dist: pillow
 Requires-Dist: exifread
 Requires-Dist: tqdm
+Requires-Dist: argcomplete
 Dynamic: license-file
 
 # Android Pic Sort
@@ -201,6 +202,29 @@ When done developing:
 
 ```bash
 deactivate
+```
+
+### Shell Completion (Tab Completion)
+
+For bash, zsh, or similar shells, enable tab completion for the `android-pic-sort` command:
+
+```bash
+# Register completion (one-time setup after pip install -e .)
+eval "$(register-python-argcomplete android-pic-sort)"
+```
+
+After that, you can press Tab to complete flags:
+```bash
+android-pic-sort --s<TAB>      # completes to --source
+android-pic-sort --t<TAB>      # completes to --target
+android-pic-sort --l<TAB>      # completes to --language
+```
+
+To make it persistent, add the above line to your shell config (`.bashrc`, `.zshrc`, etc.):
+
+```bash
+echo 'eval "$(register-python-argcomplete android-pic-sort)"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ## License
