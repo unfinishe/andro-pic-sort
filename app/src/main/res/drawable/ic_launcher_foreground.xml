@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Sorted month columns (destination structure) -->
+    <path
+        android:fillColor="@color/launcher_icon_fg"
+        android:pathData="M52,40h14a4,4 0,0 1,4 4v34a4,4 0,0 1,-4 4H52a4,4 0,0 1,-4 -4V44a4,4 0,0 1,4 -4zM72,34h14a4,4 0,0 1,4 4v40a4,4 0,0 1,-4 4H72a4,4 0,0 1,-4 -4V38a4,4 0,0 1,4 -4zM32,46h14a4,4 0,0 1,4 4v28a4,4 0,0 1,-4 4H32a4,4 0,0 1,-4 -4V50a4,4 0,0 1,4 -4z" />
+    <!-- Date markers on columns -->
+    <path
+        android:fillColor="@color/launcher_icon_bg"
+        android:pathData="M56,46h6v3h-6zM56,52h6v3h-6zM76,40h6v3h-6zM76,46h6v3h-6zM36,52h6v3h-6zM36,58h6v3h-6z" />
+    <!-- Source photo tile -->
+    <path
+        android:fillColor="@color/launcher_icon_accent"
+        android:pathData="M14,56h18a4,4 0,0 1,4 4v18a4,4 0,0 1,-4 4H14a4,4 0,0 1,-4 -4V60a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="@color/launcher_icon_bg"
+        android:pathData="M13,76l6,-6l4,4l3,-3l6,6zM26,62a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5z" />
+    <!-- Calendar badge (date extraction) -->
+    <path
+        android:fillColor="@color/launcher_icon_fg"
+        android:pathData="M18,20h26a4,4 0,0 1,4 4v19a4,4 0,0 1,-4 4H18a4,4 0,0 1,-4 -4V24a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="@color/launcher_icon_bg"
+        android:pathData="M14,28h34v4H14zM20,35h6v6h-6zM30,35h6v6h-6z" />
+    <!-- Sort arrow from source/date to destination columns -->
+    <path
+        android:fillColor="@color/launcher_icon_accent"
+        android:pathData="M40,58h18v-6l10,10l-10,10v-6H40z" />
+</vector>
+

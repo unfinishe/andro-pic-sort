@@ -1,4 +1,0 @@
-pillow
-exifread
-tqdm
-argcomplete

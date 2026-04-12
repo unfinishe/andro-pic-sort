@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Android Pic Sort</string>
+    <string name="title">Foto-Sortierer</string>
+    <string name="subtitle">Organisiere deine Fotos mit wenigen Klicks in Jahres- und Monatsordner.</string>
+    <string name="folders_section">Ordner</string>
+    <string name="run_options_section">Sortieroptionen</string>
+    <string name="source_folder">Quellordner</string>
+    <string name="target_folder">Zielordner</string>
+    <string name="source_icon_desc">Symbol fuer Quellordner</string>
+    <string name="target_icon_desc">Symbol fuer Zielordner</string>
+    <string name="copy_icon_desc">Symbol fuer Kopiermodus</string>
+    <string name="move_icon_desc">Symbol fuer Verschiebemodus</string>
+    <string name="no_folder_selected">Noch kein Ordner ausgewaehlt.</string>
+    <string name="choose_folder">Ordner auswählen</string>
+    <string name="choose_source_folder">Quellordner auswaehlen</string>
+    <string name="choose_target_folder">Zielordner auswaehlen</string>
+    <string name="operation_mode">Modus</string>
+    <string name="conflict_policy">Wenn Zieldateiname existiert</string>
+    <string name="conflict_rename">Umbenennen</string>
+    <string name="conflict_overwrite">Ueberschreiben</string>
+    <string name="date_source_mode">Datumsquelle</string>
+    <string name="date_source_metadata_then_file">Metadaten-Datum (Fallback: Dateidatum)</string>
+    <string name="date_source_file_only">Nur Dateidatum (schneller)</string>
+    <string name="date_source_metadata_icon_desc">Symbol fuer Metadaten-Datum</string>
+    <string name="date_source_file_icon_desc">Symbol fuer Dateidatum</string>
+    <string name="copy_mode">Kopieren</string>
+    <string name="move_mode">Verschieben</string>
+    <string name="dry_run_mode">Dry-Run (keine Dateiaenderung)</string>
+    <string name="dry_run_active">Dry-Run ist aktiv.</string>
+    <string name="start_sort">Sortierung starten</string>
+    <string name="sorting_in_progress">Sortierung läuft...</string>
+    <string name="progress_value">Verarbeitet %1$d / %2$d</string>
+    <string name="report_title">Bericht</string>
+    <string name="report_line">Verarbeitet: %1$d, Kopiert: %2$d, Verschoben: %3$d, Fehler: %4$d, Uebersprungen: %5$d, Geplant: %6$d, Umbenannt: %7$d</string>
+    <string name="report_errors_line">Fehlergruppen - Erstellen: %1$d, Kopieren: %2$d, Loeschen: %3$d</string>
+    <string name="dry_run_report_note">Dry-Run abgeschlossen. Es wurden keine Dateien kopiert oder verschoben.</string>
+    <string name="missing_folder_selection">Bitte Quell- und Zielordner auswählen.</string>
+    <string name="error_prefix">Fehler: %1$s</string>
+</resources>
+

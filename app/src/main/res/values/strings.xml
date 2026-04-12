@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Android Pic Sort</string>
+    <string name="title">Photo sorter</string>
+    <string name="subtitle">Organize your photos into year and month folders in a few taps.</string>
+    <string name="folders_section">Folders</string>
+    <string name="run_options_section">Run options</string>
+    <string name="source_folder">Source folder</string>
+    <string name="target_folder">Target folder</string>
+    <string name="source_icon_desc">Source directory icon</string>
+    <string name="target_icon_desc">Target directory icon</string>
+    <string name="copy_icon_desc">Copy mode icon</string>
+    <string name="move_icon_desc">Move mode icon</string>
+    <string name="no_folder_selected">No folder selected yet.</string>
+    <string name="choose_folder">Choose folder</string>
+    <string name="choose_source_folder">Choose source folder</string>
+    <string name="choose_target_folder">Choose target folder</string>
+    <string name="operation_mode">Operation mode</string>
+    <string name="conflict_policy">If target filename exists</string>
+    <string name="conflict_rename">Rename</string>
+    <string name="conflict_overwrite">Overwrite</string>
+    <string name="date_source_mode">Date source</string>
+    <string name="date_source_metadata_then_file">Metadata date (fallback: file date)</string>
+    <string name="date_source_file_only">File date only (faster)</string>
+    <string name="date_source_metadata_icon_desc">Metadata date option icon</string>
+    <string name="date_source_file_icon_desc">File date option icon</string>
+    <string name="copy_mode">Copy</string>
+    <string name="move_mode">Move</string>
+    <string name="dry_run_mode">Dry run (no file changes)</string>
+    <string name="dry_run_active">Dry run is active.</string>
+    <string name="start_sort">Start sorting</string>
+    <string name="sorting_in_progress">Sorting in progress...</string>
+    <string name="progress_value">Processed %1$d / %2$d</string>
+    <string name="report_title">Report</string>
+    <string name="report_line">Processed: %1$d, Copied: %2$d, Moved: %3$d, Failed: %4$d, Skipped: %5$d, Planned: %6$d, Renamed: %7$d</string>
+    <string name="report_errors_line">Error buckets - Create: %1$d, Copy: %2$d, Delete: %3$d</string>
+    <string name="dry_run_report_note">Dry run finished. No files were copied or moved.</string>
+    <string name="missing_folder_selection">Please select source and target folder.</string>
+    <string name="error_prefix">Error: %1$s</string>
+</resources>
+

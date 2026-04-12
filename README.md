@@ -1,216 +1,141 @@
-# Android Pic Sort
+# Android Pic Sort (Native Android App)
 
-## Purpose
-This project automatically sorts photos on an Android smartphone by creation date into year and month folders.
+## Core Function
+Android Pic Sort organizes photos from a selected source folder into a selected target folder by date.
+It supports `Copy` or `Move`, optional `Dry run`, and creates a `YYYY/MM MonthName` folder structure.
 
-## Overview
-The script reads date information from image metadata (EXIF) and moves files into a target structure following the pattern `Year/Month`.
+## Status
+- Current state: first usable Android MVP scaffold implemented.
+- UX refresh applied: modernized Material 3 layout and launcher icon.
+- Target platform: Android 15+.
+- Runtime model: fully offline, on-device processing.
+- UI language policy: app follows system locale; German if device language is German, otherwise English fallback.
 
-Example structure:
-```text
-target_dir/
-├── 2025/
-│   ├── 01 January
-│   ├── 02 February
-│   └── ...
-└── 2026/
-    ├── 01 January
-    └── ...
+## Android Development Quick Start
+Prerequisites:
+- Android Studio (latest stable)
+- Android SDK Platform 35
+- JDK 21 with `javac` available (full JDK, not JRE)
+
+Build and test commands:
+```bash
+./gradlew :core:test
+./gradlew :app:assembleDebug
 ```
 
-If a photo lacks EXIF date metadata, creation date from the file system is used as a fallback.
+If SDK/JDK are not auto-detected in your shell session:
+```bash
+export JAVA_HOME=/path/to/jdk-21
+export PATH="$JAVA_HOME/bin:$PATH"
+export ANDROID_HOME=$HOME/Android/Sdk
+./gradlew :core:test :app:assembleDebug
+```
 
-## Requirements
-- Android smartphone
-- Pydroid 3
-- Python 3.10+
-- Project dependencies are managed in `pyproject.toml`
+Run on device/emulator:
+- Open project in Android Studio.
+- Select an Android 15 emulator or device.
+- Run the `app` configuration.
 
-## Quick Start (Android)
-### 1. Set up Pydroid
-1. Install Pydroid 3 from the Play Store.
-2. Open the Pydroid terminal and install the project with its dependencies:
+## One-click Run Workflow
+### Android Studio (recommended)
+- Open the project in Android Studio.
+- Start an emulator from Device Manager.
+- Select run configuration `app`.
+- Click Run (green play button).
+
+### Terminal helper script
+If you prefer CLI, use the helper script from project root:
 
 ```bash
-cd /path/to/android-pic-sort
-pip install .
+./scripts/dev-run.sh
 ```
 
-### 2. Set up folders
-1. Source folder (unsorted photos), e.g.:
-   `/storage/emulated/0/DCIM/Camera`
-2. Target folder (sorted photos), e.g.:
-   `/storage/emulated/0/Pictures/SortedPhotos`
-
-Tip: Use internal storage when possible instead of SD card.
-
-### 3. Grant permissions
-1. Allow Pydroid access to files and media.
-2. If needed, enable manually in Android settings:
-   `Settings > Apps > Pydroid 3 > Permissions`
-
-### 4. Run the script
-```bash
-python sort_photos.py \
-	--source "/storage/emulated/0/DCIM/Camera" \
-	--target "/storage/emulated/0/Pictures/SortedPhotos"
-```
-
-You can also use the installed console command:
+Optional: pass a specific device serial if multiple devices are connected:
 
 ```bash
-android-pic-sort \
-  --source "/storage/emulated/0/DCIM/Camera" \
-  --target "/storage/emulated/0/Pictures/SortedPhotos"
+./scripts/dev-run.sh emulator-5554
 ```
 
-## CLI Specification
-### Required parameters
-- `--source`: Path to the source folder with unsorted photos.
-- `--target`: Path to the target folder for sorted photos.
+Known local environment limitation:
+- If only a JRE is installed, Gradle cannot compile Kotlin/JVM tests. Install a full JDK 21.
 
-### Optional parameters
-- `--dry-run`: Show planned actions without moving files.
-- `--verbose`: More detailed log output for diagnosis.
-- `--language`: Month language (default: `en`, supported: `en` for English, `de` for German).
-- `--help`: Show command-line help.
+## Product Scope (MVP)
+- Select a source folder on device storage.
+- Select a target folder on device storage.
+- Choose operation mode: `Copy` or `Move`.
+- Optional `Dry run` mode for safe preview without file changes.
+- Scan and process all supported image formats recursively.
+- Select date source mode:
+  - Metadata date (fallback: file date)
+  - File date only (faster)
+- Organize files into `YYYY/MM MonthName` (default schema).
+- Resolve filename conflicts by policy: `Rename` (for example `name_1.ext`) or `Overwrite`.
+- Show a final report (processed, copied/moved, failed, skipped, planned, renamed, categorized error buckets).
 
-## Recommended safe workflow
-1. First run with 10-20 test images.
-2. Verify the output structure.
-3. Then apply to the full camera folder.
-4. Create a backup of important photos before production run.
+## Out of Scope (MVP)
+- Undo functionality.
+- Saved jobs or scheduling.
+- Cloud sync or online services.
+- Advanced rule builder UI.
 
-## Common issues
-- `PermissionError`: Check file/media access for Pydroid in settings.
-- `No module named ...`: Install the project dependencies with `pip install .` or `pip install -e .`.
-- Files not found: Verify source path under `/storage/emulated/0/...`.
-- Slow processing: Work in smaller batches and keep display active during execution.
-- Missing creation date: Some images may not have EXIF date metadata.
+## Format Support
+MVP should support Android-typical image formats at minimum:
+- `jpg`, `jpeg`, `png`, `webp`, `gif`, `bmp`, `tiff`, `heic`, `heif`, `dng`
 
-## Examples
-Test run without moving files:
-```bash
-python sort_photos.py \
-  --source "/storage/emulated/0/Download/TestPhotos" \
-  --target "/storage/emulated/0/Download/SortedTestPhotos" \
-  --dry-run
-```
+If a format cannot expose metadata consistently on a specific device, processing must fall back gracefully to file timestamp.
 
-Production run with German month names:
-```bash
-python sort_photos.py \
-  --source "/storage/emulated/0/DCIM/Camera" \
-  --target "/storage/emulated/0/Pictures/SortedPhotos" \
-  --language de
-```
+## Architecture Direction
+- Native Android app in Kotlin.
+- Material 3 UI with Android design guideline compliance.
+- Clean separation:
+  - Domain rules (date extraction strategy, folder schema, conflict resolution)
+  - Android adapters (SAF/MediaStore access, EXIF reader integration)
+  - UI + ViewModel orchestration
+- Folder schema is extensible by design; default implementation remains `YYYY/MM MonthName`.
 
-## Development
+See architecture details in `arc42/`.
 
-### Set up local Python environment
-Clone or navigate to the project directory and create a virtual environment:
+## Testing Strategy (State of the Art)
+Use a layered Android test stack:
+- Unit tests: JUnit 5 + AssertJ/Kotest for domain logic.
+- Coroutine/Flow tests: `kotlinx-coroutines-test` + Turbine.
+- Android JVM tests: Robolectric for storage/date edge cases not requiring device.
+- UI tests: Jetpack Compose UI Test + Espresso interop where needed.
+- End-to-end device tests: UI Automator for storage picker/user flows.
+- Performance: Macrobenchmark + Baseline Profiles for startup and long-running sort jobs.
+- Static quality gates: Detekt, ktlint, Android Lint, dependency audit in CI.
 
-```bash
-# Create virtual environment
-python3 -m venv venv
+Definition of done for each feature includes:
+- unit coverage for business rules,
+- at least one UI/instrumentation path for critical flows,
+- negative-path test for storage and metadata fallback behavior.
 
-# Activate it
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-venv\Scripts\activate
-```
+## Migration Plan
+### Phase 0 - Foundation (current)
+- [x] Confirm product scope and constraints.
+- [x] Create arc42 architecture documentation.
+- [x] Bootstrap Android project structure (Gradle, app module, core module).
 
-### Install dependencies
-```bash
-pip install --upgrade pip
-pip install -e .
-```
+### Phase 1 - Domain Parity MVP
+- [x] Implement folder traversal and format filter.
+- [x] Implement date strategy: EXIF -> filesystem fallback.
+- [x] Implement schema `YYYY/MM MonthName`.
+- [x] Implement conflict naming policy.
+- [x] Implement copy/move engine with progress callbacks.
+- [x] Implement simple summary report.
 
-This installs the project in editable mode and pulls dependencies from `pyproject.toml`.
+### Phase 2 - Android UX + Storage
+- [x] Folder selection UX via Android Storage Access Framework.
+- [x] Permissions and URI persistence flow.
+- [x] Material 3 screens (setup, progress, report).
+- [ ] Cancel-safe and error-resilient long-running execution.
 
-### Run the script in development
-Test the script on your desktop with local folders:
+### Phase 3 - Quality Hardening
+- [ ] Complete unit/instrumentation/macrobenchmark suite.
+- [ ] Baseline profile generation and startup/perf tuning.
+- [ ] CI gates for lint, tests, and release checks.
 
-```bash
-# Dry run (recommended first)
-python sort_photos.py \
-  --source ~/Downloads/TestPhotos \
-  --target ~/Downloads/SortedPhotos \
-  --dry-run --verbose
-
-# Actual run
-python sort_photos.py \
-  --source ~/Downloads/TestPhotos \
-  --target ~/Downloads/SortedPhotos
-```
-
-### Module structure
-The project is organized as follows:
-```
-src/
-├── __init__.py           # Package metadata
-├── __main__.py           # Entry point for `python -m src`
-└── sort_photos.py        # Main implementation
-sort_photos.py            # Root wrapper script
-```
-
-### Running the module directly
-You can also run it as a Python module:
-
-```bash
-python -m src --source ~/Downloads/TestPhotos --target ~/Downloads/SortedPhotos --dry-run
-```
-
-### Alternative development commands
-You can use any of these entry points during development:
-
-```bash
-python sort_photos.py --source ~/Downloads/TestPhotos --target ~/Downloads/SortedPhotos --dry-run
-python -m src --source ~/Downloads/TestPhotos --target ~/Downloads/SortedPhotos --dry-run
-android-pic-sort --source ~/Downloads/TestPhotos --target ~/Downloads/SortedPhotos --dry-run
-```
-
-### Create test photos
-To test locally without real photos, use sample images from unsplash or create dummy files:
-
-```bash
-# Create test directory structure
-mkdir -p ~/Downloads/TestPhotos
-
-# Copy some images or create dummy JPEG files
-cp ~/Pictures/*.jpg ~/Downloads/TestPhotos/
-```
-
-### Deactivate environment
-When done developing:
-
-```bash
-deactivate
-```
-
-### Shell Completion (Tab Completion)
-
-For bash, zsh, or similar shells, enable tab completion for the `android-pic-sort` command:
-
-```bash
-# Register completion (one-time setup after pip install -e .)
-eval "$(register-python-argcomplete android-pic-sort)"
-```
-
-After that, you can press Tab to complete flags:
-```bash
-android-pic-sort --s<TAB>      # completes to --source
-android-pic-sort --t<TAB>      # completes to --target
-android-pic-sort --l<TAB>      # completes to --language
-```
-
-To make it persistent, add the above line to your shell config (`.bashrc`, `.zshrc`, etc.):
-
-```bash
-echo 'eval "$(register-python-argcomplete android-pic-sort)"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-## License
-This project is licensed under the MIT License.
+## Documentation Governance
+- `README.md` is the single source of truth for scope, workflows, and implementation progress.
+- `AGENTS.md` must stay short and reference this README instead of duplicating details.
+- Architecture documentation is maintained in `arc42/*.md`.
