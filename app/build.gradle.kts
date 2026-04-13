@@ -12,8 +12,8 @@ android {
         applicationId = "de.thomba.andropicsort"
         minSdk = 35
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = (project.findProperty("app.versionCode") as String).toInt()
+        versionName = project.findProperty("app.versionName") as String
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -38,6 +38,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
 

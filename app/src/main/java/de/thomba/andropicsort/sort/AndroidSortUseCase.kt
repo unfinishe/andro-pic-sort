@@ -12,16 +12,20 @@ import de.thomba.andropicsort.core.InputFilePolicy
 import de.thomba.andropicsort.core.OperationMode
 import de.thomba.andropicsort.core.SortReport
 import de.thomba.andropicsort.core.YearMonthFolderSchema
+import kotlinx.coroutines.ensureActive
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.coroutines.coroutineContext
 
 class AndroidSortUseCase(
     private val context: Context,
     private val contentResolver: ContentResolver,
 ) : SortUseCase {
+
+    // ── Internal helper types ───────────────────────────────────────────
 
     private data class SortCandidate(
         val file: DocumentFile,
@@ -43,19 +47,8 @@ class AndroidSortUseCase(
         val existingNames: MutableSet<String>,
     )
 
-    private val exifDateFormatter = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss", Locale.US)
-
-    override suspend fun run(config: SortConfig, onProgress: (SortProgress) -> Unit): SortReport {
-        val sourceRoot = DocumentFile.fromTreeUri(context, config.sourceTreeUri)
-        val targetRoot = DocumentFile.fromTreeUri(context, config.targetTreeUri)
-
-        if (sourceRoot == null || !sourceRoot.isDirectory || targetRoot == null || !targetRoot.isDirectory) {
-            return SortReport(processed = 0, copied = 0, moved = 0, failed = 1, skipped = 0, dryRun = config.dryRun)
-        }
-
-        val files = collectCandidateFiles(sourceRoot, config)
-        val yearDirCache = mutableMapOf<String, DocumentFile?>()
-        val monthStateCache = mutableMapOf<String, TargetFolderState?>()
+    /** P7 – Mutable accumulator replacing 10 loose counter variables. */
+    private class Counters {
         var processed = 0
         var copied = 0
         var moved = 0
@@ -67,114 +60,7 @@ class AndroidSortUseCase(
         var copyFailed = 0
         var deleteFailed = 0
 
-        onProgress(SortProgress(processed = 0, total = files.size))
-
-        for (candidate in files) {
-            val sourceFile = candidate.file
-            processed += 1
-            try {
-                val fileName = sourceFile.name
-                if (fileName.isNullOrBlank()) {
-                    skipped += 1
-                    onProgress(SortProgress(processed = processed, total = files.size))
-                    continue
-                }
-
-                val sourceDate = resolveDate(sourceFile, candidate.dateSourceMode)
-                val (yearFolder, monthFolder) = YearMonthFolderSchema.pathFor(sourceDate, config.locale)
-                val monthState = resolveMonthState(
-                    targetRoot = targetRoot,
-                    yearFolder = yearFolder,
-                    monthFolder = monthFolder,
-                    createIfMissing = !config.dryRun,
-                    yearDirCache = yearDirCache,
-                    monthStateCache = monthStateCache,
-                )
-
-                if (!config.dryRun && monthState == null) {
-                    failed += 1
-                    createFailed += 1
-                    onProgress(SortProgress(processed = processed, total = files.size))
-                    continue
-                }
-
-                val existingNames = monthState?.existingNames ?: emptySet()
-                val plannedName = when (config.conflictPolicy) {
-                    ConflictPolicy.RENAME -> ConflictResolver.resolveUniqueName(fileName, existingNames)
-                    ConflictPolicy.OVERWRITE -> fileName
-                }
-                val plannedWasRenamed = plannedName != fileName
-                if (plannedWasRenamed) renamed += 1
-
-                if (config.dryRun) {
-                    planned += 1
-                    onProgress(SortProgress(processed = processed, total = files.size))
-                    continue
-                }
-
-                if (monthState == null) {
-                    failed += 1
-                    createFailed += 1
-                    onProgress(SortProgress(processed = processed, total = files.size))
-                    continue
-                }
-                val mime = sourceFile.type ?: "application/octet-stream"
-                val targetPlanResult = createTargetFileWithPolicy(
-                    targetState = monthState,
-                    desiredName = fileName,
-                    mimeType = mime,
-                    conflictPolicy = config.conflictPolicy,
-                )
-
-                if (targetPlanResult is TargetPlanResult.Failure) {
-                    failed += 1
-                    if (targetPlanResult.deleteConflictFailed) {
-                        deleteFailed += 1
-                    } else {
-                        createFailed += 1
-                    }
-                    onProgress(SortProgress(processed = processed, total = files.size))
-                    continue
-                }
-                val targetPlan = (targetPlanResult as TargetPlanResult.Success).plan
-
-                if (targetPlan.wasRenamed && !plannedWasRenamed) {
-                    renamed += 1
-                }
-
-                val copiedOk = copyContent(sourceFile.uri, targetPlan.targetFile.uri)
-                if (!copiedOk) {
-                    if (targetPlan.targetFile.delete()) {
-                        targetPlan.targetFile.name?.let { monthState.existingNames.remove(it) }
-                    }
-                    failed += 1
-                    copyFailed += 1
-                    onProgress(SortProgress(processed = processed, total = files.size))
-                    continue
-                }
-
-                when (config.mode) {
-                    OperationMode.COPY -> copied += 1
-                    OperationMode.MOVE -> {
-                        if (sourceFile.delete()) {
-                            moved += 1
-                        } else {
-                            if (targetPlan.targetFile.delete()) {
-                                targetPlan.targetFile.name?.let { monthState.existingNames.remove(it) }
-                            }
-                            failed += 1
-                            deleteFailed += 1
-                        }
-                    }
-                }
-            } catch (_: Exception) {
-                failed += 1
-            }
-
-            onProgress(SortProgress(processed = processed, total = files.size))
-        }
-
-        return SortReport(
+        fun toReport(dryRun: Boolean, durationMillis: Long) = SortReport(
             processed = processed,
             copied = copied,
             moved = moved,
@@ -185,9 +71,186 @@ class AndroidSortUseCase(
             createFailed = createFailed,
             copyFailed = copyFailed,
             deleteFailed = deleteFailed,
-            dryRun = config.dryRun,
+            dryRun = dryRun,
+            durationMillis = durationMillis,
         )
     }
+
+    private val exifDateFormatter = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss", Locale.US)
+
+    // ── Public API ──────────────────────────────────────────────────────
+
+    override suspend fun run(config: SortConfig, onProgress: (SortProgress) -> Unit): SortReport {
+        val startTime = System.nanoTime()
+
+        // P1 — Source ≠ Target validation
+        if (config.sourceTreeUri == config.targetTreeUri) {
+            return errorReport(config.dryRun)
+        }
+
+        val sourceRoot = DocumentFile.fromTreeUri(context, config.sourceTreeUri)
+        val targetRoot = DocumentFile.fromTreeUri(context, config.targetTreeUri)
+
+        if (sourceRoot == null || !sourceRoot.isDirectory || targetRoot == null || !targetRoot.isDirectory) {
+            return SortReport(processed = 0, copied = 0, moved = 0, failed = 1, skipped = 0, dryRun = config.dryRun)
+        }
+
+        val files = collectCandidateFiles(sourceRoot, config)
+        val yearDirCache = mutableMapOf<String, DocumentFile?>()
+        val monthStateCache = mutableMapOf<String, TargetFolderState?>()
+        val c = Counters()
+
+        // P6 — Progress throttling state
+        var lastProgressTime = System.nanoTime()
+        val progressIntervalNanos = 100_000_000L // 100 ms
+
+        onProgress(SortProgress(processed = 0, total = files.size))
+
+        for (candidate in files) {
+            // P2 — Cancellation support
+            coroutineContext.ensureActive()
+
+            val sourceFile = candidate.file
+            c.processed += 1
+            try {
+                val fileName = sourceFile.name
+                if (fileName.isNullOrBlank()) {
+                    c.skipped += 1
+                    lastProgressTime = emitThrottled(c, files.size, onProgress, lastProgressTime, progressIntervalNanos)
+                    continue
+                }
+
+                val sourceDate = resolveDate(sourceFile, candidate.dateSourceMode)
+                val (yearFolder, monthFolder) = YearMonthFolderSchema.pathFor(sourceDate, config.locale)
+                val monthState = resolveMonthState(
+                    targetRoot, yearFolder, monthFolder,
+                    createIfMissing = !config.dryRun,
+                    yearDirCache, monthStateCache,
+                )
+
+                // P7 — Separated dry-run path
+                if (config.dryRun) {
+                    processDryRun(fileName, monthState, config.conflictPolicy, c)
+                    lastProgressTime = emitThrottled(c, files.size, onProgress, lastProgressTime, progressIntervalNanos)
+                    continue
+                }
+
+                if (monthState == null) {
+                    c.failed += 1; c.createFailed += 1
+                    lastProgressTime = emitThrottled(c, files.size, onProgress, lastProgressTime, progressIntervalNanos)
+                    continue
+                }
+
+                // P7 — Separated real-file path
+                processRealFile(sourceFile, fileName, monthState, config, c)
+            } catch (_: Exception) {
+                c.failed += 1
+            }
+
+            lastProgressTime = emitThrottled(c, files.size, onProgress, lastProgressTime, progressIntervalNanos)
+        }
+
+        // Always emit final progress
+        onProgress(SortProgress(processed = c.processed, total = files.size))
+
+        // P8 — Duration measurement
+        val durationMillis = (System.nanoTime() - startTime) / 1_000_000
+        return c.toReport(config.dryRun, durationMillis)
+    }
+
+    // ── Per-file processing (P7) ────────────────────────────────────────
+
+    private fun processDryRun(
+        fileName: String,
+        monthState: TargetFolderState?,
+        conflictPolicy: ConflictPolicy,
+        c: Counters,
+    ) {
+        val existingNames = monthState?.existingNames ?: emptySet<String>()
+        val plannedName = when (conflictPolicy) {
+            ConflictPolicy.RENAME -> ConflictResolver.resolveUniqueName(fileName, existingNames)
+            ConflictPolicy.OVERWRITE -> fileName
+        }
+        if (plannedName != fileName) c.renamed += 1
+        // Update cache so subsequent dry-run entries see realistic names (P3 fix)
+        monthState?.existingNames?.add(plannedName)
+        c.planned += 1
+    }
+
+    private fun processRealFile(
+        sourceFile: DocumentFile,
+        fileName: String,
+        monthState: TargetFolderState,
+        config: SortConfig,
+        c: Counters,
+    ) {
+        val plannedName = when (config.conflictPolicy) {
+            ConflictPolicy.RENAME -> ConflictResolver.resolveUniqueName(fileName, monthState.existingNames)
+            ConflictPolicy.OVERWRITE -> fileName
+        }
+        val plannedWasRenamed = plannedName != fileName
+        if (plannedWasRenamed) c.renamed += 1
+
+        val mime = sourceFile.type ?: "application/octet-stream"
+        val targetPlanResult = createTargetFileWithPolicy(monthState, fileName, mime, config.conflictPolicy)
+
+        if (targetPlanResult is TargetPlanResult.Failure) {
+            c.failed += 1
+            if (targetPlanResult.deleteConflictFailed) c.deleteFailed += 1 else c.createFailed += 1
+            return
+        }
+        val targetPlan = (targetPlanResult as TargetPlanResult.Success).plan
+
+        if (targetPlan.wasRenamed && !plannedWasRenamed) c.renamed += 1
+
+        val copiedOk = copyContent(sourceFile.uri, targetPlan.targetFile.uri)
+        if (!copiedOk) {
+            cleanupTarget(targetPlan.targetFile, monthState)
+            c.failed += 1; c.copyFailed += 1
+            return
+        }
+
+        when (config.mode) {
+            OperationMode.COPY -> c.copied += 1
+            OperationMode.MOVE -> {
+                if (sourceFile.delete()) {
+                    c.moved += 1
+                } else {
+                    cleanupTarget(targetPlan.targetFile, monthState)
+                    c.failed += 1; c.deleteFailed += 1
+                }
+            }
+        }
+    }
+
+    private fun cleanupTarget(targetFile: DocumentFile, monthState: TargetFolderState) {
+        if (targetFile.delete()) {
+            targetFile.name?.let { monthState.existingNames.remove(it) }
+        }
+    }
+
+    // ── Progress throttling (P6) ────────────────────────────────────────
+
+    private fun emitThrottled(
+        c: Counters,
+        total: Int,
+        onProgress: (SortProgress) -> Unit,
+        lastTime: Long,
+        intervalNanos: Long,
+    ): Long {
+        val now = System.nanoTime()
+        if (now - lastTime >= intervalNanos || c.processed == total) {
+            onProgress(SortProgress(processed = c.processed, total = total))
+            return now
+        }
+        return lastTime
+    }
+
+    // ── Directory and file helpers ──────────────────────────────────────
+
+    private fun errorReport(dryRun: Boolean) = SortReport(
+        processed = 0, copied = 0, moved = 0, failed = 1, skipped = 0, dryRun = dryRun,
+    )
 
     private fun ensureDirectory(parent: DocumentFile, name: String, createIfMissing: Boolean): DocumentFile? {
         val existing = parent.listFiles().firstOrNull { it.isDirectory && it.name == name }
@@ -199,11 +262,9 @@ class AndroidSortUseCase(
         desiredName: String,
         mimeType: String,
         conflictPolicy: ConflictPolicy,
-    ): TargetPlanResult {
-        return when (conflictPolicy) {
-            ConflictPolicy.RENAME -> createRenamedTargetFile(targetState, desiredName, mimeType)
-            ConflictPolicy.OVERWRITE -> createOverwrittenTargetFile(targetState, desiredName, mimeType)
-        }
+    ): TargetPlanResult = when (conflictPolicy) {
+        ConflictPolicy.RENAME -> createRenamedTargetFile(targetState, desiredName, mimeType)
+        ConflictPolicy.OVERWRITE -> createOverwrittenTargetFile(targetState, desiredName, mimeType)
     }
 
     private fun createRenamedTargetFile(
@@ -217,14 +278,9 @@ class AndroidSortUseCase(
             if (created != null) {
                 targetState.existingNames.add(resolvedName)
                 return TargetPlanResult.Success(
-                    TargetPlan(
-                        targetFile = created,
-                        wasRenamed = resolvedName != desiredName,
-                    )
+                    TargetPlan(targetFile = created, wasRenamed = resolvedName != desiredName)
                 )
             }
-
-            // SAF providers can race externally; reserve attempted name and retry.
             targetState.existingNames.add(resolvedName)
         }
         return TargetPlanResult.Failure(deleteConflictFailed = false)
@@ -240,19 +296,14 @@ class AndroidSortUseCase(
             if (existing != null && !existing.delete()) {
                 return TargetPlanResult.Failure(deleteConflictFailed = true)
             }
+            targetState.existingNames.remove(desiredName) // R3 fix
         }
 
         val created = targetState.folder.createFile(mimeType, desiredName)
             ?: return TargetPlanResult.Failure(deleteConflictFailed = false)
 
         targetState.existingNames.add(desiredName)
-
-        return TargetPlanResult.Success(
-            TargetPlan(
-                targetFile = created,
-                wasRenamed = false,
-            )
-        )
+        return TargetPlanResult.Success(TargetPlan(targetFile = created, wasRenamed = false))
     }
 
     private fun copyContent(sourceUri: Uri, targetUri: Uri): Boolean {
@@ -268,6 +319,8 @@ class AndroidSortUseCase(
         }
     }
 
+    // ── Folder cache ────────────────────────────────────────────────────
+
     private fun resolveMonthState(
         targetRoot: DocumentFile,
         yearFolder: String,
@@ -277,9 +330,7 @@ class AndroidSortUseCase(
         monthStateCache: MutableMap<String, TargetFolderState?>,
     ): TargetFolderState? {
         val monthKey = "$yearFolder/$monthFolder"
-        if (monthStateCache.containsKey(monthKey)) {
-            return monthStateCache[monthKey]
-        }
+        if (monthStateCache.containsKey(monthKey)) return monthStateCache[monthKey]
 
         val yearDir = yearDirCache.getOrPut(yearFolder) {
             ensureDirectory(targetRoot, yearFolder, createIfMissing)
@@ -297,10 +348,11 @@ class AndroidSortUseCase(
                 existingNames = it.listFiles().mapNotNull { file -> file.name }.toMutableSet(),
             )
         }
-
         monthStateCache[monthKey] = state
         return state
     }
+
+    // ── File collection ─────────────────────────────────────────────────
 
     private fun collectCandidateFiles(root: DocumentFile, config: SortConfig): List<SortCandidate> {
         val files = mutableListOf<SortCandidate>()
@@ -330,18 +382,11 @@ class AndroidSortUseCase(
         return files
     }
 
-    private fun resolveDate(file: DocumentFile, mode: DateSourceMode): LocalDateTime {
-        return when (mode) {
-            DateSourceMode.METADATA_THEN_FILE -> {
-                val fromExif = tryReadExifDate(file.uri)
-                if (fromExif != null) {
-                    fromExif
-                } else {
-                    fileDate(file)
-                }
-            }
-            DateSourceMode.FILE_ONLY -> fileDate(file)
-        }
+    // ── Date resolution ─────────────────────────────────────────────────
+
+    private fun resolveDate(file: DocumentFile, mode: DateSourceMode): LocalDateTime = when (mode) {
+        DateSourceMode.METADATA_THEN_FILE -> tryReadExifDate(file.uri) ?: fileDate(file)
+        DateSourceMode.FILE_ONLY -> fileDate(file)
     }
 
     private fun fileDate(file: DocumentFile): LocalDateTime {
@@ -363,6 +408,3 @@ class AndroidSortUseCase(
         }
     }
 }
-
-
-

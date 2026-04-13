@@ -55,11 +55,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startSort() {
         val state = _uiState.value
+        if (state.isRunning) return // P4 guard
+
         val source = state.sourceUri
         val target = state.targetUri
 
         if (source == null || target == null) {
             _uiState.update { it.copy(errorMessage = "missing_folders") }
+            return
+        }
+
+        // P1 — Source ≠ Target validation at UI level
+        if (source == target) {
+            _uiState.update { it.copy(errorMessage = "source_equals_target") }
             return
         }
 

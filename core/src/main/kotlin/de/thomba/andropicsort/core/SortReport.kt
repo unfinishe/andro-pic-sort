@@ -12,5 +12,6 @@ data class SortReport(
     val copyFailed: Int = 0,
     val deleteFailed: Int = 0,
     val dryRun: Boolean = false,
+    val durationMillis: Long = 0,
 )
 

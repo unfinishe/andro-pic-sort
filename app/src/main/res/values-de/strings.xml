@@ -44,6 +44,17 @@
     <string name="report_errors_line">Fehlergruppen - Erstellen: %1$d, Kopieren: %2$d, Loeschen: %3$d</string>
     <string name="dry_run_report_note">Dry-Run abgeschlossen. Es wurden keine Dateien kopiert oder verschoben.</string>
     <string name="missing_folder_selection">Bitte Quell- und Zielordner auswählen.</string>
+    <string name="source_equals_target">Quell- und Zielordner dürfen nicht identisch sein.</string>
+    <string name="report_duration">Dauer: %1$s</string>
     <string name="error_prefix">Fehler: %1$s</string>
+    <string name="about_title">Über die App</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_copyright_label">Copyright</string>
+    <string name="about_copyright_value">© 2026 Thomas Baumhauer</string>
+    <string name="about_license_label">Lizenz</string>
+    <!-- about_license_value intentionally not translated – always shown in English -->
+    <string name="about_description_label">Beschreibung</string>
+    <string name="about_description_value">Android Pic Sort organisiert Fotos und Videos aus einem Quellordner in eine datumsbasierte Ordnerstruktur (JJJJ/MM Monatsname). Läuft vollständig offline auf dem Gerät.</string>
+    <string name="about_close">Schließen</string>
 </resources>
 

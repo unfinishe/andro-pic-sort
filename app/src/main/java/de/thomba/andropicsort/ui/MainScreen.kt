@@ -25,6 +25,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,6 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -64,6 +68,12 @@ fun MainScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
     val dryRunLabel = stringResource(R.string.dry_run_mode)
+    var showAbout by remember { mutableStateOf(false) }
+
+    if (showAbout) {
+        AboutDialog(onDismiss = { showAbout = false })
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -87,6 +97,15 @@ fun MainScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showAbout = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_about),
+                            contentDescription = stringResource(R.string.about_title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -118,7 +137,7 @@ fun MainScreen(
                         verticalArrangement = Arrangement.spacedBy(sectionSpacing),
                     ) {
                         HeroBanner(compact = compactLayout)
-                        FoldersCard(state, onPickSource, onPickTarget)
+                        FoldersCard(state, onPickSource, onPickTarget, compact = compactLayout)
                     }
                     Column(
                         modifier = Modifier.weight(1f),
@@ -134,7 +153,7 @@ fun MainScreen(
                     verticalArrangement = Arrangement.spacedBy(sectionSpacing),
                 ) {
                     HeroBanner(compact = compactLayout)
-                    FoldersCard(state, onPickSource, onPickTarget)
+                    FoldersCard(state, onPickSource, onPickTarget, compact = compactLayout)
                     RunOptionsCard(state, viewModel, dryRunLabel, compact = compactLayout)
                     StatusArea(state, compact = compactLayout)
                 }
@@ -205,13 +224,18 @@ private fun FoldersCard(
     state: MainUiState,
     onPickSource: () -> Unit,
     onPickTarget: () -> Unit,
+    compact: Boolean = false,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(text = stringResource(R.string.folders_section), style = MaterialTheme.typography.titleMedium)
+        CardAccentHeader(
+            title = stringResource(R.string.folders_section),
+            accentIconRes = R.drawable.ic_folders_pair,
+            compact = compact,
+        )
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(R.drawable.ic_source_directory),
@@ -261,8 +285,12 @@ private fun RunOptionsCard(
         shape = RoundedCornerShape(20.dp),
     ) {
         val optionsSpacing = if (compact) 8.dp else 10.dp
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(optionsSpacing)) {
-            Text(text = stringResource(R.string.run_options_section), style = MaterialTheme.typography.titleMedium)
+        CardAccentHeader(
+            title = stringResource(R.string.run_options_section),
+            accentIconRes = R.drawable.ic_tune,
+            compact = compact,
+        )
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(optionsSpacing)) {
             OptionSelector(
                 title = stringResource(R.string.operation_mode),
                 enabled = !state.isRunning,
@@ -417,8 +445,12 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = stringResource(R.string.report_title), style = MaterialTheme.typography.titleMedium)
+                CardAccentHeader(
+                    title = stringResource(R.string.report_title),
+                    accentIconRes = R.drawable.ic_summary,
+                    compact = compact,
+                )
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = stringResource(
                             R.string.report_line,
@@ -442,15 +474,21 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
                     if (report.dryRun) {
                         Text(text = stringResource(R.string.dry_run_report_note))
                     }
+                    if (report.durationMillis > 0) {
+                        Text(
+                            text = stringResource(R.string.report_duration, formatDuration(report.durationMillis)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
 
         state.errorMessage?.let { key ->
-            val message = if (key == "missing_folders") {
-                stringResource(R.string.missing_folder_selection)
-            } else {
-                stringResource(R.string.error_prefix, key)
+            val message = when (key) {
+                "missing_folders" -> stringResource(R.string.missing_folder_selection)
+                "source_equals_target" -> stringResource(R.string.source_equals_target)
+                else -> stringResource(R.string.error_prefix, key)
             }
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -472,6 +510,52 @@ private data class SelectorOption(
     val iconRes: Int? = null,
     val iconDescription: String? = null,
 )
+
+@Composable
+private fun CardAccentHeader(
+    title: String,
+    accentIconRes: Int,
+    compact: Boolean = false,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f),
+                    )
+                ),
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            )
+            .padding(horizontal = 14.dp, vertical = if (compact) 9.dp else 11.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(if (compact) 52.dp else 66.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f)),
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(accentIconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(if (compact) 18.dp else 20.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
 
 @Composable
 private fun OptionSelector(
@@ -541,6 +625,13 @@ private fun FolderSection(
             Text(buttonLabel)
         }
     }
+}
+
+private fun formatDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}.${(millis % 1000) / 100}s"
 }
 
 
