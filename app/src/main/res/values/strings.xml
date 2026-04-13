@@ -37,7 +37,7 @@
     <string name="dry_run_mode">Dry run (no file changes)</string>
     <string name="dry_run_active">Dry run is active.</string>
     <string name="start_sort">Start sorting</string>
-    <string name="sorting_in_progress">Sorting in progress...</string>
+    <string name="sorting_in_progress">Sorting in progress…</string>
     <string name="progress_value">Processed %1$d / %2$d</string>
     <string name="report_title">Report</string>
     <string name="report_line">Processed: %1$d, Copied: %2$d, Moved: %3$d, Failed: %4$d, Skipped: %5$d, Planned: %6$d, Renamed: %7$d</string>

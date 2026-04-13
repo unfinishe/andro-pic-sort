@@ -103,7 +103,8 @@ fun MainScreen(
                 .verticalScroll(scrollState),
         ) {
             val isWideLayout = maxWidth >= 820.dp
-            val compactLayout = isWideLayout || isLandscape || maxHeight < 760.dp
+            // maxHeight is unbounded inside verticalScroll; landscape detection via LocalConfiguration covers compact-height case.
+            val compactLayout = isWideLayout || isLandscape
             val sectionSpacing = if (compactLayout) 10.dp else 14.dp
 
             if (isWideLayout) {
