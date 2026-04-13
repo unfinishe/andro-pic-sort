@@ -12,6 +12,7 @@ data class SortConfig(
     val mode: OperationMode,
     val conflictPolicy: ConflictPolicy,
     val dateSourceMode: DateSourceMode,
+    val sortNonImages: Boolean,
     val locale: Locale,
     val dryRun: Boolean,
 )

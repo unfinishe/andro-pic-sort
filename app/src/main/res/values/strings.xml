@@ -24,8 +24,14 @@
     <string name="date_source_file_only">File date only (faster)</string>
     <string name="date_source_metadata_icon_desc">Metadata date option icon</string>
     <string name="date_source_file_icon_desc">File date option icon</string>
+    <string name="sort_scope">What to sort</string>
+    <string name="sort_scope_images_only">Images only</string>
+    <string name="sort_scope_images_and_non_images">Images and non-images (for example videos)</string>
+    <string name="sort_scope_images_only_icon_desc">Images only option icon</string>
+    <string name="sort_scope_images_and_non_images_icon_desc">Images and non-images option icon</string>
     <string name="copy_mode">Copy</string>
     <string name="move_mode">Move</string>
+    <string name="sort_non_images_hint">For non-images, file date is used automatically.</string>
     <string name="dry_run_mode">Dry run (no file changes)</string>
     <string name="dry_run_active">Dry run is active.</string>
     <string name="start_sort">Start sorting</string>

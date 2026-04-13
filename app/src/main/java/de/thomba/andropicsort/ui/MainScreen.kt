@@ -156,6 +156,30 @@ fun MainScreen(
                     ),
                 )
 
+                OptionSelector(
+                    title = stringResource(R.string.sort_scope),
+                    enabled = !state.isRunning,
+                    options = listOf(
+                        SelectorOption(
+                            label = stringResource(R.string.sort_scope_images_only),
+                            selected = !state.sortNonImages,
+                            onSelect = { viewModel.onSortNonImagesChanged(false) },
+                            iconRes = R.drawable.ic_scope_images_only,
+                            iconDescription = stringResource(R.string.sort_scope_images_only_icon_desc),
+                        ),
+                        SelectorOption(
+                            label = stringResource(R.string.sort_scope_images_and_non_images),
+                            selected = state.sortNonImages,
+                            onSelect = { viewModel.onSortNonImagesChanged(true) },
+                            iconRes = R.drawable.ic_scope_images_plus,
+                            iconDescription = stringResource(R.string.sort_scope_images_and_non_images_icon_desc),
+                        ),
+                    ),
+                )
+                if (state.sortNonImages) {
+                    Text(text = stringResource(R.string.sort_non_images_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Checkbox(
                         checked = state.dryRun,

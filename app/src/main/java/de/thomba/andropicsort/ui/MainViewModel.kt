@@ -49,6 +49,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(dateSourceMode = mode) }
     }
 
+    fun onSortNonImagesChanged(enabled: Boolean) {
+        _uiState.update { it.copy(sortNonImages = enabled) }
+    }
+
     fun startSort() {
         val state = _uiState.value
         val source = state.sourceUri
@@ -79,6 +83,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         mode = state.mode,
                         conflictPolicy = state.conflictPolicy,
                         dateSourceMode = state.dateSourceMode,
+                        sortNonImages = state.sortNonImages,
                         locale = locale,
                         dryRun = state.dryRun,
                     )

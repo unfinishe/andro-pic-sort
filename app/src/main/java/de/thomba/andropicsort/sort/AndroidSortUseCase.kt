@@ -8,9 +8,9 @@ import androidx.exifinterface.media.ExifInterface
 import de.thomba.andropicsort.core.ConflictPolicy
 import de.thomba.andropicsort.core.ConflictResolver
 import de.thomba.andropicsort.core.DateSourceMode
+import de.thomba.andropicsort.core.InputFilePolicy
 import de.thomba.andropicsort.core.OperationMode
 import de.thomba.andropicsort.core.SortReport
-import de.thomba.andropicsort.core.SupportedImageFormats
 import de.thomba.andropicsort.core.YearMonthFolderSchema
 import java.time.Instant
 import java.time.LocalDateTime
@@ -23,6 +23,11 @@ class AndroidSortUseCase(
     private val contentResolver: ContentResolver,
 ) : SortUseCase {
 
+    private data class SortCandidate(
+        val file: DocumentFile,
+        val dateSourceMode: DateSourceMode,
+    )
+
     private sealed interface TargetPlanResult {
         data class Success(val plan: TargetPlan) : TargetPlanResult
         data class Failure(val deleteConflictFailed: Boolean = false) : TargetPlanResult
@@ -31,6 +36,11 @@ class AndroidSortUseCase(
     private data class TargetPlan(
         val targetFile: DocumentFile,
         val wasRenamed: Boolean,
+    )
+
+    private data class TargetFolderState(
+        val folder: DocumentFile,
+        val existingNames: MutableSet<String>,
     )
 
     private val exifDateFormatter = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss", Locale.US)
@@ -43,7 +53,9 @@ class AndroidSortUseCase(
             return SortReport(processed = 0, copied = 0, moved = 0, failed = 1, skipped = 0, dryRun = config.dryRun)
         }
 
-        val files = collectImageFiles(sourceRoot)
+        val files = collectCandidateFiles(sourceRoot, config)
+        val yearDirCache = mutableMapOf<String, DocumentFile?>()
+        val monthStateCache = mutableMapOf<String, TargetFolderState?>()
         var processed = 0
         var copied = 0
         var moved = 0
@@ -57,7 +69,8 @@ class AndroidSortUseCase(
 
         onProgress(SortProgress(processed = 0, total = files.size))
 
-        for (sourceFile in files) {
+        for (candidate in files) {
+            val sourceFile = candidate.file
             processed += 1
             try {
                 val fileName = sourceFile.name
@@ -67,19 +80,25 @@ class AndroidSortUseCase(
                     continue
                 }
 
-                val sourceDate = resolveDate(sourceFile, config.dateSourceMode)
+                val sourceDate = resolveDate(sourceFile, candidate.dateSourceMode)
                 val (yearFolder, monthFolder) = YearMonthFolderSchema.pathFor(sourceDate, config.locale)
-                val yearDir = ensureDirectory(targetRoot, yearFolder, createIfMissing = !config.dryRun)
-                val monthDir = yearDir?.let { ensureDirectory(it, monthFolder, createIfMissing = !config.dryRun) }
+                val monthState = resolveMonthState(
+                    targetRoot = targetRoot,
+                    yearFolder = yearFolder,
+                    monthFolder = monthFolder,
+                    createIfMissing = !config.dryRun,
+                    yearDirCache = yearDirCache,
+                    monthStateCache = monthStateCache,
+                )
 
-                if (!config.dryRun && monthDir == null) {
+                if (!config.dryRun && monthState == null) {
                     failed += 1
                     createFailed += 1
                     onProgress(SortProgress(processed = processed, total = files.size))
                     continue
                 }
 
-                val existingNames = monthDir?.listFiles()?.mapNotNull { it.name }?.toSet().orEmpty()
+                val existingNames = monthState?.existingNames ?: emptySet()
                 val plannedName = when (config.conflictPolicy) {
                     ConflictPolicy.RENAME -> ConflictResolver.resolveUniqueName(fileName, existingNames)
                     ConflictPolicy.OVERWRITE -> fileName
@@ -93,7 +112,7 @@ class AndroidSortUseCase(
                     continue
                 }
 
-                if (monthDir == null) {
+                if (monthState == null) {
                     failed += 1
                     createFailed += 1
                     onProgress(SortProgress(processed = processed, total = files.size))
@@ -101,7 +120,7 @@ class AndroidSortUseCase(
                 }
                 val mime = sourceFile.type ?: "application/octet-stream"
                 val targetPlanResult = createTargetFileWithPolicy(
-                    targetFolder = monthDir,
+                    targetState = monthState,
                     desiredName = fileName,
                     mimeType = mime,
                     conflictPolicy = config.conflictPolicy,
@@ -125,7 +144,9 @@ class AndroidSortUseCase(
 
                 val copiedOk = copyContent(sourceFile.uri, targetPlan.targetFile.uri)
                 if (!copiedOk) {
-                    targetPlan.targetFile.delete()
+                    if (targetPlan.targetFile.delete()) {
+                        targetPlan.targetFile.name?.let { monthState.existingNames.remove(it) }
+                    }
                     failed += 1
                     copyFailed += 1
                     onProgress(SortProgress(processed = processed, total = files.size))
@@ -138,7 +159,9 @@ class AndroidSortUseCase(
                         if (sourceFile.delete()) {
                             moved += 1
                         } else {
-                            targetPlan.targetFile.delete()
+                            if (targetPlan.targetFile.delete()) {
+                                targetPlan.targetFile.name?.let { monthState.existingNames.remove(it) }
+                            }
                             failed += 1
                             deleteFailed += 1
                         }
@@ -172,31 +195,27 @@ class AndroidSortUseCase(
     }
 
     private fun createTargetFileWithPolicy(
-        targetFolder: DocumentFile,
+        targetState: TargetFolderState,
         desiredName: String,
         mimeType: String,
         conflictPolicy: ConflictPolicy,
     ): TargetPlanResult {
         return when (conflictPolicy) {
-            ConflictPolicy.RENAME -> createRenamedTargetFile(targetFolder, desiredName, mimeType)
-            ConflictPolicy.OVERWRITE -> createOverwrittenTargetFile(targetFolder, desiredName, mimeType)
+            ConflictPolicy.RENAME -> createRenamedTargetFile(targetState, desiredName, mimeType)
+            ConflictPolicy.OVERWRITE -> createOverwrittenTargetFile(targetState, desiredName, mimeType)
         }
     }
 
     private fun createRenamedTargetFile(
-        targetFolder: DocumentFile,
+        targetState: TargetFolderState,
         desiredName: String,
         mimeType: String,
     ): TargetPlanResult {
         repeat(50) {
-            val existingNames = targetFolder.listFiles().mapNotNull { it.name }.toSet()
-            val resolvedName = ConflictResolver.resolveUniqueName(desiredName, existingNames)
-            if (targetFolder.findFile(resolvedName) != null) {
-                return@repeat
-            }
-
-            val created = targetFolder.createFile(mimeType, resolvedName)
+            val resolvedName = ConflictResolver.resolveUniqueName(desiredName, targetState.existingNames)
+            val created = targetState.folder.createFile(mimeType, resolvedName)
             if (created != null) {
+                targetState.existingNames.add(resolvedName)
                 return TargetPlanResult.Success(
                     TargetPlan(
                         targetFile = created,
@@ -204,22 +223,29 @@ class AndroidSortUseCase(
                     )
                 )
             }
+
+            // SAF providers can race externally; reserve attempted name and retry.
+            targetState.existingNames.add(resolvedName)
         }
         return TargetPlanResult.Failure(deleteConflictFailed = false)
     }
 
     private fun createOverwrittenTargetFile(
-        targetFolder: DocumentFile,
+        targetState: TargetFolderState,
         desiredName: String,
         mimeType: String,
     ): TargetPlanResult {
-        val existing = targetFolder.findFile(desiredName)
-        if (existing != null && !existing.delete()) {
-            return TargetPlanResult.Failure(deleteConflictFailed = true)
+        if (targetState.existingNames.contains(desiredName)) {
+            val existing = targetState.folder.findFile(desiredName)
+            if (existing != null && !existing.delete()) {
+                return TargetPlanResult.Failure(deleteConflictFailed = true)
+            }
         }
 
-        val created = targetFolder.createFile(mimeType, desiredName)
+        val created = targetState.folder.createFile(mimeType, desiredName)
             ?: return TargetPlanResult.Failure(deleteConflictFailed = false)
+
+        targetState.existingNames.add(desiredName)
 
         return TargetPlanResult.Success(
             TargetPlan(
@@ -242,8 +268,42 @@ class AndroidSortUseCase(
         }
     }
 
-    private fun collectImageFiles(root: DocumentFile): List<DocumentFile> {
-        val files = mutableListOf<DocumentFile>()
+    private fun resolveMonthState(
+        targetRoot: DocumentFile,
+        yearFolder: String,
+        monthFolder: String,
+        createIfMissing: Boolean,
+        yearDirCache: MutableMap<String, DocumentFile?>,
+        monthStateCache: MutableMap<String, TargetFolderState?>,
+    ): TargetFolderState? {
+        val monthKey = "$yearFolder/$monthFolder"
+        if (monthStateCache.containsKey(monthKey)) {
+            return monthStateCache[monthKey]
+        }
+
+        val yearDir = yearDirCache.getOrPut(yearFolder) {
+            ensureDirectory(targetRoot, yearFolder, createIfMissing)
+        }
+
+        if (yearDir == null) {
+            monthStateCache[monthKey] = null
+            return null
+        }
+
+        val monthDir = ensureDirectory(yearDir, monthFolder, createIfMissing)
+        val state = monthDir?.let {
+            TargetFolderState(
+                folder = it,
+                existingNames = it.listFiles().mapNotNull { file -> file.name }.toMutableSet(),
+            )
+        }
+
+        monthStateCache[monthKey] = state
+        return state
+    }
+
+    private fun collectCandidateFiles(root: DocumentFile, config: SortConfig): List<SortCandidate> {
+        val files = mutableListOf<SortCandidate>()
         val stack = ArrayDeque<DocumentFile>()
         stack.add(root)
 
@@ -252,7 +312,18 @@ class AndroidSortUseCase(
             node.listFiles().forEach { child ->
                 when {
                     child.isDirectory -> stack.add(child)
-                    child.isFile && SupportedImageFormats.isSupported(child.name) -> files.add(child)
+                    child.isFile && InputFilePolicy.shouldInclude(child.name, config.sortNonImages) -> {
+                        files.add(
+                            SortCandidate(
+                                file = child,
+                                dateSourceMode = InputFilePolicy.effectiveDateSourceMode(
+                                    fileName = child.name,
+                                    configuredMode = config.dateSourceMode,
+                                    includeNonImages = config.sortNonImages,
+                                ),
+                            )
+                        )
+                    }
                 }
             }
         }

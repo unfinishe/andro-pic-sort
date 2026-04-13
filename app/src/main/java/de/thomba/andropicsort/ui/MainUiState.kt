@@ -12,6 +12,7 @@ data class MainUiState(
     val mode: OperationMode = OperationMode.COPY,
     val conflictPolicy: ConflictPolicy = ConflictPolicy.RENAME,
     val dateSourceMode: DateSourceMode = DateSourceMode.METADATA_THEN_FILE,
+    val sortNonImages: Boolean = false,
     val dryRun: Boolean = false,
     val isRunning: Boolean = false,
     val progressProcessed: Int = 0,

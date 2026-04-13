@@ -8,7 +8,6 @@ This file provides minimal agent guidance. Product and implementation truth live
 - `arc42/` (architecture decisions and constraints)
 
 ## Current Project State
-- Repo has migrated from a Python CLI prototype to a native Android app.
 - Keep all new project communication and artifacts in English.
 - Target platform and behavior constraints are defined in `README.md`.
 
@@ -19,8 +18,4 @@ This file provides minimal agent guidance. Product and implementation truth live
   - `README.md#product-scope-mvp`
   - `README.md#testing-strategy-state-of-the-art`
   - `README.md#migration-plan`
-- Architecture details belong in `arc42/*.md`, not in this file.
-
-## Legacy Python Note
-- Python prototype artifacts were removed.
-- Historical migration status is tracked in `README.md`.
+- Architecture details such as application constraints, decision points, and quality goals belong in `arc42/*.md`, not in this file. Be compliant to the architecture and keep the architecture in sync.

@@ -3,6 +3,7 @@
 ## Core Function
 Android Pic Sort organizes photos from a selected source folder into a selected target folder by date.
 It supports `Copy` or `Move`, optional `Dry run`, and creates a `YYYY/MM MonthName` folder structure.
+Optionally, it can also sort non-image files (for example videos), using file date mode automatically for those files.
 
 ## Status
 - Current state: first usable Android MVP scaffold implemented.
@@ -65,6 +66,7 @@ Known local environment limitation:
 - Choose operation mode: `Copy` or `Move`.
 - Optional `Dry run` mode for safe preview without file changes.
 - Scan and process all supported image formats recursively.
+- Optional toggle to include non-image files; non-images use file date mode automatically.
 - Select date source mode:
   - Metadata date (fallback: file date)
   - File date only (faster)
