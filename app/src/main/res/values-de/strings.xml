@@ -5,6 +5,8 @@
     <string name="subtitle">Organisiere deine Fotos mit wenigen Klicks in Jahres- und Monatsordner.</string>
     <string name="folders_section">Ordner</string>
     <string name="run_options_section">Sortieroptionen</string>
+    <string name="hero_title">Schnelle, lokale Mediensortierung</string>
+    <string name="hero_subtitle">Ordner waehlen, Optionen setzen und Dateien nach Datum organisieren.</string>
     <string name="source_folder">Quellordner</string>
     <string name="target_folder">Zielordner</string>
     <string name="source_icon_desc">Symbol fuer Quellordner</string>

@@ -5,6 +5,8 @@
     <string name="subtitle">Organize your photos into year and month folders in a few taps.</string>
     <string name="folders_section">Folders</string>
     <string name="run_options_section">Run options</string>
+    <string name="hero_title">Fast, local media sorting</string>
+    <string name="hero_subtitle">Choose folders, set options, and organize by date on device.</string>
     <string name="source_folder">Source folder</string>
     <string name="target_folder">Target folder</string>
     <string name="source_icon_desc">Source directory icon</string>
