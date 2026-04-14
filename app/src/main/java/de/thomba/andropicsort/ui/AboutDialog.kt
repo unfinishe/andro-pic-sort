@@ -23,7 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalUriHandler
 import de.thomba.andropicsort.BuildConfig
 import de.thomba.andropicsort.R
 
@@ -62,8 +65,22 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 AboutSection(
+                    label = stringResource(R.string.about_description_label),
+                    value = stringResource(R.string.about_description_value),
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                AboutSection(
                     label = stringResource(R.string.about_copyright_label),
                     value = stringResource(R.string.about_copyright_value),
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                AboutLinkSection(
+                    label = stringResource(R.string.about_github_label),
+                    url = stringResource(R.string.about_github_url),
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -71,13 +88,6 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 AboutSection(
                     label = stringResource(R.string.about_license_label),
                     value = stringResource(R.string.about_license_value),
-                )
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                AboutSection(
-                    label = stringResource(R.string.about_description_label),
-                    value = stringResource(R.string.about_description_value),
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -104,6 +114,26 @@ private fun AboutSection(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun AboutLinkSection(label: String, url: String) {
+    val uriHandler = LocalUriHandler.current
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = url,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier.clickable { uriHandler.openUri(url) },
         )
     }
 }

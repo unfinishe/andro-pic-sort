@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +25,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -53,6 +54,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextDecoration
 import de.thomba.andropicsort.R
 import de.thomba.andropicsort.core.ConflictPolicy
 import de.thomba.andropicsort.core.DateSourceMode
@@ -69,6 +72,7 @@ fun MainScreen(
     val scrollState = rememberScrollState()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
+    val isWideLayout = configuration.screenWidthDp >= 820
     val dryRunLabel = stringResource(R.string.dry_run_mode)
     var showAbout by remember { mutableStateOf(false) }
 
@@ -79,51 +83,20 @@ fun MainScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    if (isLandscape) {
-                        Text(
-                            text = stringResource(R.string.title),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = stringResource(R.string.title),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                text = stringResource(R.string.subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showAbout = true }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_about),
-                            contentDescription = stringResource(R.string.about_title),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+                title = { Text("") },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         },
     ) { innerPadding ->
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState),
         ) {
-            val isWideLayout = maxWidth >= 820.dp
             // maxHeight is unbounded inside verticalScroll; landscape detection via LocalConfiguration covers compact-height case.
             val compactLayout = isWideLayout || isLandscape
             val sectionSpacing = if (compactLayout) 10.dp else 14.dp
@@ -138,7 +111,7 @@ fun MainScreen(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(sectionSpacing),
                     ) {
-                        HeroBanner(compact = compactLayout)
+                        AppIdentityHeader(compact = compactLayout, onAboutClick = { showAbout = true })
                         FoldersCard(state, onPickSource, onPickTarget, compact = compactLayout)
                     }
                     Column(
@@ -154,7 +127,7 @@ fun MainScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(sectionSpacing),
                 ) {
-                    HeroBanner(compact = compactLayout)
+                    AppIdentityHeader(compact = compactLayout, onAboutClick = { showAbout = true })
                     FoldersCard(state, onPickSource, onPickTarget, compact = compactLayout)
                     RunOptionsCard(state, viewModel, dryRunLabel, compact = compactLayout)
                     StatusArea(state, compact = compactLayout)
@@ -167,13 +140,13 @@ fun MainScreen(
 }
 
 @Composable
-private fun HeroBanner(compact: Boolean) {
+private fun AppIdentityHeader(compact: Boolean, onAboutClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (compact) 2.dp else 6.dp),
+            .padding(top = if (compact) 4.dp else 8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
     ) {
         Box(
             modifier = Modifier
@@ -182,42 +155,101 @@ private fun HeroBanner(compact: Boolean) {
                     brush = Brush.linearGradient(
                         colors = listOf(
                             MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.tertiaryContainer,
                         )
                     )
                 )
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 18.dp),
         ) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(if (compact) 64.dp else 90.dp)
+                    .size(if (compact) 66.dp else 94.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            IconButton(
+                onClick = onAboutClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = if (compact) 4.dp else 6.dp, end = if (compact) 4.dp else 6.dp)
+                    .size(if (compact) 32.dp else 40.dp),
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_scope_images_plus),
-                    contentDescription = null,
+                    painter = painterResource(R.drawable.ic_about),
+                    contentDescription = stringResource(R.string.about_title),
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(if (compact) 24.dp else 28.dp),
+                    modifier = Modifier.size(if (compact) 18.dp else 20.dp),
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = stringResource(R.string.hero_title),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = stringResource(R.string.hero_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = if (compact) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(0.58f),
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_folders_pair),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .size(if (compact) 22.dp else 26.dp),
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = stringResource(R.string.hero_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(R.string.hero_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(if (compact) 8.dp else 10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.28f)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun HeaderBadge(text: String) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+        )
     }
 }
 
@@ -236,6 +268,7 @@ private fun FoldersCard(
             title = stringResource(R.string.folders_section),
             accentIconRes = R.drawable.ic_folders_pair,
             compact = compact,
+            description = stringResource(R.string.folders_section_description),
         )
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -291,6 +324,7 @@ private fun RunOptionsCard(
             title = stringResource(R.string.run_options_section),
             accentIconRes = R.drawable.ic_tune,
             compact = compact,
+            description = stringResource(R.string.run_options_section_description),
         )
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(optionsSpacing)) {
             OptionSelector(
@@ -518,6 +552,7 @@ private fun CardAccentHeader(
     title: String,
     accentIconRes: Int,
     compact: Boolean = false,
+    description: String? = null,
 ) {
     Box(
         modifier = Modifier
@@ -540,21 +575,32 @@ private fun CardAccentHeader(
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f)),
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
         ) {
-            Icon(
-                painter = painterResource(accentIconRes),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(if (compact) 18.dp else 20.dp),
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(accentIconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(if (compact) 18.dp else 20.dp),
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
