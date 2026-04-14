@@ -11,6 +11,8 @@
     <string name="target_folder">Target folder</string>
     <string name="source_icon_desc">Source directory icon</string>
     <string name="target_icon_desc">Target directory icon</string>
+    <string name="folder_storage_internal">Internal storage</string>
+    <string name="folder_storage_external">External storage</string>
     <string name="copy_icon_desc">Copy mode icon</string>
     <string name="move_icon_desc">Move mode icon</string>
     <string name="no_folder_selected">No folder selected yet.</string>

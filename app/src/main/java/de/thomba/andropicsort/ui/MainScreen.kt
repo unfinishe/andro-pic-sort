@@ -1,5 +1,7 @@
 package de.thomba.andropicsort.ui
 
+import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -245,7 +247,7 @@ private fun FoldersCard(
                 Text(text = stringResource(R.string.source_folder), style = MaterialTheme.typography.bodyMedium)
             }
             FolderSection(
-                value = state.sourceUri?.toString(),
+                value = state.sourceUri?.toDisplayText(),
                 buttonLabel = stringResource(R.string.choose_source_folder),
                 iconRes = R.drawable.ic_source_directory,
                 onPick = onPickSource,
@@ -263,7 +265,7 @@ private fun FoldersCard(
                 Text(text = stringResource(R.string.target_folder), style = MaterialTheme.typography.bodyMedium)
             }
             FolderSection(
-                value = state.targetUri?.toString(),
+                value = state.targetUri?.toDisplayText(),
                 buttonLabel = stringResource(R.string.choose_target_folder),
                 iconRes = R.drawable.ic_target_directory,
                 onPick = onPickTarget,
@@ -632,6 +634,33 @@ private fun formatDuration(millis: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}.${(millis % 1000) / 100}s"
+}
+
+@Composable
+private fun Uri.toDisplayText(): String {
+    val internalStorage = stringResource(R.string.folder_storage_internal)
+    val externalStorage = stringResource(R.string.folder_storage_external)
+
+    val decodedUri = Uri.decode(toString())
+    if (!DocumentsContract.isTreeUri(this)) return decodedUri
+
+    val treeId = runCatching { DocumentsContract.getTreeDocumentId(this) }
+        .getOrNull()
+        ?.let(Uri::decode)
+        ?: return decodedUri
+
+    val separatorIndex = treeId.indexOf(':')
+    if (separatorIndex <= 0) return treeId
+
+    val volumeId = treeId.substring(0, separatorIndex)
+    val relativePath = treeId.substring(separatorIndex + 1).trim('/').ifBlank { null }
+    val volumeLabel = if (volumeId.equals("primary", ignoreCase = true)) {
+        internalStorage
+    } else {
+        "$externalStorage ($volumeId)"
+    }
+
+    return if (relativePath == null) volumeLabel else "$volumeLabel/$relativePath"
 }
 
 

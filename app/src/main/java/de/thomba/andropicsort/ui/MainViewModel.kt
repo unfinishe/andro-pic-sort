@@ -8,6 +8,8 @@ import de.thomba.andropicsort.core.AppLocalePolicy
 import de.thomba.andropicsort.core.ConflictPolicy
 import de.thomba.andropicsort.core.DateSourceMode
 import de.thomba.andropicsort.core.OperationMode
+import de.thomba.andropicsort.settings.StoredUiSettings
+import de.thomba.andropicsort.settings.UiSettingsStorage
 import de.thomba.andropicsort.sort.AndroidSortUseCase
 import de.thomba.andropicsort.sort.SortConfig
 import kotlinx.coroutines.Dispatchers
@@ -21,36 +23,41 @@ import java.util.Locale
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val sortUseCase = AndroidSortUseCase(application, application.contentResolver)
+    private val settingsStorage = UiSettingsStorage(application)
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
+    init {
+        restoreSettings()
+    }
+
     fun onSourceSelected(uri: Uri) {
-        _uiState.update { it.copy(sourceUri = uri, report = null, errorMessage = null) }
+        updateStateAndPersist { it.copy(sourceUri = uri, report = null, errorMessage = null) }
     }
 
     fun onTargetSelected(uri: Uri) {
-        _uiState.update { it.copy(targetUri = uri, report = null, errorMessage = null) }
+        updateStateAndPersist { it.copy(targetUri = uri, report = null, errorMessage = null) }
     }
 
     fun onModeChanged(mode: OperationMode) {
-        _uiState.update { it.copy(mode = mode) }
+        updateStateAndPersist { it.copy(mode = mode) }
     }
 
     fun onDryRunChanged(enabled: Boolean) {
-        _uiState.update { it.copy(dryRun = enabled) }
+        updateStateAndPersist { it.copy(dryRun = enabled) }
     }
 
     fun onConflictPolicyChanged(policy: ConflictPolicy) {
-        _uiState.update { it.copy(conflictPolicy = policy) }
+        updateStateAndPersist { it.copy(conflictPolicy = policy) }
     }
 
     fun onDateSourceModeChanged(mode: DateSourceMode) {
-        _uiState.update { it.copy(dateSourceMode = mode) }
+        updateStateAndPersist { it.copy(dateSourceMode = mode) }
     }
 
     fun onSortNonImagesChanged(enabled: Boolean) {
-        _uiState.update { it.copy(sortNonImages = enabled) }
+        updateStateAndPersist { it.copy(sortNonImages = enabled) }
     }
 
     fun startSort() {
@@ -111,6 +118,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+    }
+
+    private fun restoreSettings() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val stored = settingsStorage.load()
+            val source = stored.sourceUri?.takeIf(::hasPersistedPermission)
+            val target = stored.targetUri?.takeIf(::hasPersistedPermission)
+
+            _uiState.update {
+                it.copy(
+                    sourceUri = source,
+                    targetUri = target,
+                    mode = stored.mode,
+                    conflictPolicy = stored.conflictPolicy,
+                    dateSourceMode = stored.dateSourceMode,
+                    sortNonImages = stored.sortNonImages,
+                    dryRun = stored.dryRun,
+                )
+            }
+
+            // Keep storage consistent when a persisted URI is no longer accessible.
+            if (source != stored.sourceUri || target != stored.targetUri) {
+                settingsStorage.save(_uiState.value.toStoredSettings())
+            }
+        }
+    }
+
+    private fun updateStateAndPersist(update: (MainUiState) -> MainUiState) {
+        _uiState.update(update)
+        viewModelScope.launch(Dispatchers.IO) {
+            settingsStorage.save(_uiState.value.toStoredSettings())
+        }
+    }
+
+    private fun hasPersistedPermission(uri: Uri): Boolean {
+        return getApplication<Application>().contentResolver.persistedUriPermissions.any {
+            it.uri == uri && it.isReadPermission
+        }
+    }
+
+    private fun MainUiState.toStoredSettings(): StoredUiSettings {
+        return StoredUiSettings(
+            sourceUri = sourceUri,
+            targetUri = targetUri,
+            mode = mode,
+            conflictPolicy = conflictPolicy,
+            dateSourceMode = dateSourceMode,
+            sortNonImages = sortNonImages,
+            dryRun = dryRun,
+        )
     }
 }
 

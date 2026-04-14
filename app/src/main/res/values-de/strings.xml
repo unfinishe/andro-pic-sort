@@ -11,6 +11,8 @@
     <string name="target_folder">Zielordner</string>
     <string name="source_icon_desc">Symbol für Quellordner</string>
     <string name="target_icon_desc">Symbol für Zielordner</string>
+    <string name="folder_storage_internal">Interner Speicher</string>
+    <string name="folder_storage_external">Externer Speicher</string>
     <string name="copy_icon_desc">Symbol für Kopiermodus</string>
     <string name="move_icon_desc">Symbol für Verschiebemodus</string>
     <string name="no_folder_selected">Noch kein Ordner ausgewaehlt.</string>
