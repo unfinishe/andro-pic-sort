@@ -66,7 +66,7 @@
 
 ### 📖 Documentation
 
-- **Privacy Policy**: [PRIVACY_POLICY.md](PRIVACY_POLICY.md)
+- **Privacy Policy**: https://github.com/unfinishe/andro-pic-sort/blob/main/PRIVACY_POLICY.md
 - **Source Code**: https://github.com/unfinishe/andro-pic-sort
 - **Issues & Feedback**: https://github.com/unfinishe/andro-pic-sort/issues
 - **License**: MIT

@@ -153,12 +153,13 @@ Use it together with:
 ## 3. Policy, privacy, and compliance work
 
 ### 3.1 Publish a stable privacy policy URL
-- [ ] Host the privacy policy at a public HTTPS URL.
+- [x] Host the privacy policy at a public HTTPS URL.
 - [ ] Make sure the URL is stable and accessible without login.
 - [ ] Put the same URL in Play Console and any public documentation.
 
 **Current repo finding**
-- The repo contains `PRIVACY_POLICY.md`, but Play Console needs a public URL, not just a local file.
+- Public privacy policy URL is set to: `https://github.com/unfinishe/andro-pic-sort/blob/main/PRIVACY_POLICY.md`.
+- Remaining checks: verify mobile/no-login accessibility and ensure the exact same URL is used in Play Console.
 
 **Hint**
 - A GitHub Pages page or project website is usually better than linking users to a repository markdown file view.
@@ -210,14 +211,14 @@ Use it together with:
 - [ ] Review and shorten the short description if needed.
 - [ ] Update the full description in `PLAY_STORE_LISTING.md` so it matches the real app and policies.
 - [ ] Remove any outdated claims about permissions and versions.
-- [ ] Replace repo-local references like `PRIVACY_POLICY.md` with a real public URL.
+- [x] Replace repo-local references like `PRIVACY_POLICY.md` with a real public URL.
 - [ ] Prepare localized store text if you want a German store listing in addition to the default language.
 
 **Current repo finding**
 - `PLAY_STORE_LISTING.md` is a strong draft, but it still contains:
   - outdated version references
   - legacy storage permission wording
-  - a local-file style privacy policy reference
+  - privacy policy reference already updated to a public GitHub URL
 
 **Hint**
 - Keep the listing conservative. Do not promise features that are only planned in `README.md`.

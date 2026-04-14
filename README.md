@@ -161,7 +161,7 @@ Mandatory per-class coverage rules (applies immediately, not aspirational):
 - Architecture documentation is maintained in `arc42/*.md`.
 
 ### Compliance & Publishing
-- **Privacy Policy**: [PRIVACY_POLICY.md](PRIVACY_POLICY.md) – Dual-language (English & Deutsch), Google Play Store compliant
+- **Privacy Policy**: https://github.com/unfinishe/andro-pic-sort/blob/main/PRIVACY_POLICY.md – Dual-language (English & Deutsch), Google Play Store compliant
 - **Release Notes**: [RELEASE_NOTES.md](RELEASE_NOTES.md) – Version 1.0.0 features and known limitations
 - **Play Store Listing**: [PLAY_STORE_LISTING.md](PLAY_STORE_LISTING.md) – Full text copy, screenshots checklist, and submission guidelines
 
