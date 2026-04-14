@@ -15,11 +15,41 @@
 - No sensitive path data in analytics because MVP is offline-only and has no backend telemetry.
 
 ## Testing Concept
+
+### Test layer targets
 - Unit tests for domain contracts and conflict/path/date rules.
 - Flow/coroutine tests for progress and cancellation behavior.
 - Robolectric tests for Android-adjacent logic on JVM.
 - Instrumentation tests for storage picker, permissions, and end-to-end sorting flow.
 - Macrobenchmark for startup and large-folder processing.
+
+### Mandatory coverage rules (agent-enforceable)
+These rules apply immediately to any new or modified code. AI agents and contributors must follow them before marking a task done.
+
+**`:core` domain classes**
+- Every public `object` or `class` in `core/src/main/kotlin/` must have a corresponding test file in `core/src/test/kotlin/` with the same package.
+- Missing test files for existing domain classes are treated as bugs.
+
+**Input validation paths**
+- Any function that accepts a `String?` filename or extension must be tested with: lowercase, UPPERCASE, MixedCase, `null`, and blank/empty string.
+- This applies to `SupportedImageFormats.isSupported`, `InputFilePolicy.shouldInclude`, `InputFilePolicy.effectiveDateSourceMode`, and any future equivalent.
+
+**Date and locale formatting**
+- Any function producing locale-specific date or month output must be tested for all 12 months in every supported locale (currently `Locale.GERMAN` and `Locale.ENGLISH`).
+- Month folder names must be verified for zero-padded numbering (`01`–`12`) and capitalised names.
+
+**Report and counter types**
+- Any data class representing aggregated output (e.g. `SortReport`) must be tested for: default values, every field independently, and any flag semantics (e.g. `dryRun`).
+
+**Negative and boundary paths**
+- Every business rule must have at least one explicit negative-path test (invalid input, boundary condition, or expected rejection).
+
+### ViewModel testing pattern
+- `MainViewModel` accepts an `ioDispatcher: CoroutineDispatcher = Dispatchers.IO` parameter.
+- In tests, pass `StandardTestDispatcher()` as `ioDispatcher` (and set it as `Dispatchers.Main` via `Dispatchers.setMain`). This puts all ViewModel coroutines under the test scheduler, making `advanceUntilIdle()` deterministic.
+- Use `CompletableDeferred<Unit>` as a blocker in fakes when a test needs the sort to remain in-progress (`isRunning = true`) across multiple assertions.
+- Use a fresh fake storage instance per ViewModel created inside a test to avoid cross-contamination from the `@Before` ViewModel.
+- Robolectric SDK level must match `targetSdk` in `app/build.gradle.kts`; use `@Config(sdk = [35])` and Robolectric ≥ 4.14.
 
 ## Security and Privacy
 - Offline-only processing.

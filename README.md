@@ -60,6 +60,19 @@ Optional: pass a specific device serial if multiple devices are connected:
 Known local environment limitation:
 - If only a JRE is installed, Gradle cannot compile Kotlin/JVM tests. Install a full JDK 21.
 
+## Local Release Build (No CI)
+The project currently uses a local-first release workflow (no CI release pipeline).
+
+Quick release command:
+
+```bash
+./scripts/release-local.sh
+```
+
+For setup and Play upload steps, see:
+- `docs/local-release-play-upload.md`
+- `arc42/09_architecture_decisions.md` (ADR-008, ADR-009)
+
 ## Product Scope (MVP)
 - Select a source folder on device storage.
 - Select a target folder on device storage.
@@ -111,6 +124,9 @@ Definition of done for each feature includes:
 - unit coverage for business rules,
 - at least one UI/instrumentation path for critical flows,
 - negative-path test for storage and metadata fallback behavior.
+
+Mandatory per-class coverage rules (applies immediately, not aspirational):
+- See `arc42/08_crosscutting_concepts.md` → "Mandatory coverage rules" for the full, agent-enforceable checklist covering `:core` domain classes, input validation paths, date/locale formatting, and boundary conditions.
 
 ## Migration Plan
 ### Phase 0 - Foundation (current)

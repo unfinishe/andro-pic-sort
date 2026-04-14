@@ -5,7 +5,7 @@
     <string name="subtitle">Organize your photos into year and month folders in a few taps.</string>
     <string name="folders_section">Folders</string>
     <string name="folders_section_description">Select source and target folders</string>
-    <string name="run_options_section">Run Options</string>
+    <string name="run_options_section">Run options</string>
     <string name="run_options_section_description">Configure your sorting preferences</string>
     <string name="hero_title">Fast, local media sorting</string>
     <string name="hero_subtitle">Choose folders, set options, and organize by date on device.</string>
@@ -40,6 +40,8 @@
     <string name="sort_non_images_hint">For non-images, file date is used automatically.</string>
     <string name="dry_run_mode">Dry run (no file changes)</string>
     <string name="dry_run_active">Dry run is active.</string>
+    <string name="start_section_title">Start</string>
+    <string name="start_section_description">Run sorting with the selected settings</string>
     <string name="start_sort">Start sorting</string>
     <string name="sorting_in_progress">Sorting in progress…</string>
     <string name="progress_value">Processed %1$d / %2$d</string>

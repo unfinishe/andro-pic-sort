@@ -48,7 +48,7 @@
 
 - **Target Platform**: Android 15 (API 35) and higher
 - **Minimum Storage**: ~50 MB
-- **Permissions**: `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE` (via SAF)
+- **Storage Access**: User-selected folder access via Android Storage Access Framework (SAF), including persisted URI access for future sessions
 - **Architecture**: Kotlin + Jetpack Compose, Material 3
 - **Build**: Release build with R8 code shrinking and resource optimization
 
@@ -83,7 +83,6 @@ Built with Kotlin, Jetpack Compose, and Material Design 3 for Android.
 - **Additional Date Schemas** beyond the default `YYYY/MM MonthName`
 - **Batch Job Scheduling** (optional)
 - **Enhanced Error Handling** with detailed troubleshooting guides
-- **Accessibility Improvements** (screen reader optimization)
 - **Additional Language Support**
 
 ---
@@ -95,7 +94,7 @@ Found a bug or have a feature request? Please open an issue on GitHub:
 
 ---
 
-**Version:** 1.0.0  
+**Version:** 1.0.5  
 **Build Date:** April 14, 2026  
 **Repository:** https://github.com/unfinishe/andro-pic-sort  
 **License:** MIT

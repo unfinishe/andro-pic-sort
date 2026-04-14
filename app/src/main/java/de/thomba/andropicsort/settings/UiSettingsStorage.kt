@@ -27,7 +27,7 @@ data class StoredUiSettings(
     val dryRun: Boolean = false,
 )
 
-class UiSettingsStorage(private val context: Context) {
+class UiSettingsStorage(private val context: Context) : SettingsStorage {
 
     private object Keys {
         val sourceUri = stringPreferencesKey("source_uri")
@@ -39,7 +39,7 @@ class UiSettingsStorage(private val context: Context) {
         val dryRun = booleanPreferencesKey("dry_run")
     }
 
-    suspend fun load(): StoredUiSettings {
+    override suspend fun load(): StoredUiSettings {
         val prefs = context.uiSettingsDataStore.data.first()
         return StoredUiSettings(
             sourceUri = prefs[Keys.sourceUri]?.let { Uri.parse(it) },
@@ -52,7 +52,7 @@ class UiSettingsStorage(private val context: Context) {
         )
     }
 
-    suspend fun save(settings: StoredUiSettings) {
+    override suspend fun save(settings: StoredUiSettings) {
         context.uiSettingsDataStore.edit { prefs ->
             val source = settings.sourceUri?.toString()
             if (source == null) prefs.remove(Keys.sourceUri) else prefs[Keys.sourceUri] = source

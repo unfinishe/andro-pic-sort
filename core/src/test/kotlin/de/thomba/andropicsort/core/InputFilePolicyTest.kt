@@ -39,5 +39,23 @@ class InputFilePolicyTest {
 
         assertEquals(DateSourceMode.METADATA_THEN_FILE, mode)
     }
+
+    @Test
+    fun `excludes null filename regardless of includeNonImages`() {
+        assertFalse(InputFilePolicy.shouldInclude(null, includeNonImages = false))
+        assertFalse(InputFilePolicy.shouldInclude(null, includeNonImages = true))
+    }
+
+    @Test
+    fun `excludes blank filename regardless of includeNonImages`() {
+        assertFalse(InputFilePolicy.shouldInclude("", includeNonImages = false))
+        assertFalse(InputFilePolicy.shouldInclude("   ", includeNonImages = true))
+    }
+
+    @Test
+    fun `excludes non-image when includeNonImages is false`() {
+        assertFalse(InputFilePolicy.shouldInclude("backup.zip", includeNonImages = false))
+        assertFalse(InputFilePolicy.shouldInclude("audio.mp3", includeNonImages = false))
+    }
 }
 

@@ -3,15 +3,22 @@ package de.thomba.andropicsort.ui
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import de.thomba.andropicsort.core.AppLocalePolicy
 import de.thomba.andropicsort.core.ConflictPolicy
 import de.thomba.andropicsort.core.DateSourceMode
 import de.thomba.andropicsort.core.OperationMode
+import de.thomba.andropicsort.settings.SettingsStorage
 import de.thomba.andropicsort.settings.StoredUiSettings
 import de.thomba.andropicsort.settings.UiSettingsStorage
 import de.thomba.andropicsort.sort.AndroidSortUseCase
 import de.thomba.andropicsort.sort.SortConfig
+import de.thomba.andropicsort.sort.SortUseCase
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,10 +27,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(
+    application: Application,
+    private val sortUseCase: SortUseCase,
+    private val settingsStorage: SettingsStorage,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) : AndroidViewModel(application) {
 
-    private val sortUseCase = AndroidSortUseCase(application, application.contentResolver)
-    private val settingsStorage = UiSettingsStorage(application)
+    companion object {
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = checkNotNull(extras[APPLICATION_KEY])
+                return MainViewModel(
+                    application,
+                    AndroidSortUseCase(application, application.contentResolver),
+                    UiSettingsStorage(application),
+                ) as T
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -78,7 +101,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             _uiState.update {
                 it.copy(
                     isRunning = true,
@@ -121,7 +144,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun restoreSettings() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val stored = settingsStorage.load()
             val source = stored.sourceUri?.takeIf(::hasPersistedPermission)
             val target = stored.targetUri?.takeIf(::hasPersistedPermission)
@@ -147,7 +170,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun updateStateAndPersist(update: (MainUiState) -> MainUiState) {
         _uiState.update(update)
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             settingsStorage.save(_uiState.value.toStoredSettings())
         }
     }

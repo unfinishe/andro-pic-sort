@@ -1,37 +1,35 @@
 package de.thomba.andropicsort.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 
-private val LightColors = lightColorScheme(
+private val AppColors = lightColorScheme(
     primary = BrandPrimary,
     onPrimary = BrandOnPrimary,
     primaryContainer = BrandPrimaryContainer,
     onPrimaryContainer = BrandOnPrimaryContainer,
     secondary = BrandSecondary,
+    onSecondary = BrandOnSecondary,
     secondaryContainer = BrandSecondaryContainer,
-    surfaceVariant = SurfaceVariant,
-)
-
-private val DarkColors = darkColorScheme(
-    primary = BrandPrimaryContainer,
-    onPrimary = BrandOnPrimaryContainer,
-    secondary = BrandSecondaryContainer,
-    onSecondary = BrandSecondary,
-    surfaceVariant = Color(0xFF2B313A),
+    onSecondaryContainer = DeepCharcoal,
+    background = WarmSand,
+    onBackground = DeepCharcoal,
+    surface = WarmSand,
+    onSurface = DeepCharcoal,
+    surfaceVariant = WarmSand,
+    onSurfaceVariant = OnSurfaceMuted,
+    outline = OutlineSoft,
 )
 
 @Composable
 fun AndroidPicSortTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    val colors = if (darkTheme) AppColors else AppColors
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = colors,
         typography = AppTypography,
         content = content,
     )

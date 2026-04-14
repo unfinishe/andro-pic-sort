@@ -15,13 +15,13 @@ import de.thomba.andropicsort.ui.theme.AndroidPicSortTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels { MainViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             AndroidPicSortTheme {
-                Surface {
+                Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) {
                     val sourceLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.OpenDocumentTree(),
                     ) { uri ->

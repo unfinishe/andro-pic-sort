@@ -69,7 +69,7 @@ https://github.com/unfinishe/andro-pic-sort/issues
 
 **Privacy Policy:**
 For details on data handling and privacy, see:
-PRIVACY_POLICY.md in the project repository
+https://github.com/unfinishe/andro-pic-sort/blob/main/PRIVACY_POLICY.md
 
 **License:**
 MIT License – Free and open-source
@@ -77,10 +77,10 @@ MIT License – Free and open-source
 
 ---
 
-## Release Notes (for version 1.0.0)
+## Release Notes (for version 1.0.5)
 
 ```
-🎉 Android Pic Sort 1.0.0 – Initial Release
+🎉 Android Pic Sort 1.0.5 – Initial Release
 
 The first production-ready release of Android Pic Sort is here!
 
@@ -148,9 +148,9 @@ https://github.com/unfinishe/andro-pic-sort/blob/main/RELEASE_NOTES.md
 **Does the app collect sensitive user data?**  
 No. The app does not collect, transmit, or store personal data.
 
-**What permissions are requested?**  
-- `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` via Storage Access Framework (SAF)  
-- **Purpose**: To access and organize user-selected photo folders
+**What access is required?**  
+- User-granted folder access via Android Storage Access Framework (SAF), including persisted URI access for selected source and target folders  
+- **Purpose**: To read, copy, and move files only in folders the user selects
 
 **Does the app use third-party services?**  
 No. The app operates 100% offline with no external integrations.
@@ -163,7 +163,7 @@ https://github.com/unfinishe/andro-pic-sort/blob/main/PRIVACY_POLICY.md
 ## Promotional Text (optional, for visibility)
 
 ```
-Organize thousands of photos by date in minutes – offline and private.
+Organize thousands of photos by date in seconds – offline and private.
 No ads, no tracking, no account required.
 Sort your photos your way with Android Pic Sort.
 ```
@@ -181,6 +181,6 @@ Sort your photos your way with Android Pic Sort.
 ---
 
 **Last Updated:** April 14, 2026  
-**Version:** 1.0.0  
+**Version:** 1.0.5  
 **Author:** Thomas Baumhauer
 

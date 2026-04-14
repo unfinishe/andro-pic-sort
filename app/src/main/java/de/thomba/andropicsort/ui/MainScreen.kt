@@ -2,6 +2,7 @@ package de.thomba.andropicsort.ui
 
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -54,8 +54,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.style.TextDecoration
 import de.thomba.andropicsort.R
 import de.thomba.andropicsort.core.ConflictPolicy
 import de.thomba.andropicsort.core.DateSourceMode
@@ -81,11 +79,12 @@ fun MainScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("") },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.background,
                 ),
             )
         },
@@ -93,6 +92,7 @@ fun MainScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState),
@@ -145,20 +145,15 @@ private fun AppIdentityHeader(compact: Boolean, onAboutClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = if (compact) 4.dp else 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         shape = RoundedCornerShape(26.dp),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer,
-                        )
-                    )
-                )
+                .background(MaterialTheme.colorScheme.primaryContainer)
                 .padding(horizontal = 16.dp, vertical = 18.dp),
         ) {
             Box(
@@ -166,7 +161,7 @@ private fun AppIdentityHeader(compact: Boolean, onAboutClick: () -> Unit) {
                     .align(Alignment.TopEnd)
                     .size(if (compact) 66.dp else 94.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
             )
             IconButton(
                 onClick = onAboutClick,
@@ -201,7 +196,9 @@ private fun AppIdentityHeader(compact: Boolean, onAboutClick: () -> Unit) {
                 ) {
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shadowElevation = 0.dp,
+                        tonalElevation = 0.dp,
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_folders_pair),
@@ -239,21 +236,6 @@ private fun AppIdentityHeader(compact: Boolean, onAboutClick: () -> Unit) {
 }
 
 @Composable
-private fun HeaderBadge(text: String) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-        )
-    }
-}
-
-@Composable
 private fun FoldersCard(
     state: MainUiState,
     onPickSource: () -> Unit,
@@ -263,6 +245,9 @@ private fun FoldersCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         CardAccentHeader(
             title = stringResource(R.string.folders_section),
@@ -318,6 +303,9 @@ private fun RunOptionsCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         val optionsSpacing = if (compact) 8.dp else 10.dp
         CardAccentHeader(
@@ -426,15 +414,41 @@ private fun RunOptionsCard(
                 Text(text = stringResource(R.string.dry_run_active), color = MaterialTheme.colorScheme.primary)
             }
 
-            Button(
-                onClick = viewModel::startSort,
-                enabled = !state.isRunning,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (compact) 46.dp else 50.dp),
-                shape = RoundedCornerShape(14.dp),
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             ) {
-                Text(stringResource(R.string.start_sort))
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.start_section_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = stringResource(R.string.start_section_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    Button(
+                        onClick = viewModel::startSort,
+                        enabled = !state.isRunning,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(if (compact) 46.dp else 50.dp),
+                        shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Text(stringResource(R.string.start_sort))
+                    }
+                }
             }
         }
     }
@@ -447,7 +461,8 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(R.string.sorting_in_progress), style = MaterialTheme.typography.titleMedium)
@@ -480,6 +495,8 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
                 CardAccentHeader(
                     title = stringResource(R.string.report_title),
@@ -530,6 +547,7 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = message, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -558,12 +576,7 @@ private fun CardAccentHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f),
-                    )
-                ),
+                color = MaterialTheme.colorScheme.primaryContainer,
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             )
             .padding(horizontal = 14.dp, vertical = if (compact) 9.dp else 11.dp),
@@ -573,7 +586,7 @@ private fun CardAccentHeader(
                 .align(Alignment.CenterEnd)
                 .size(if (compact) 52.dp else 66.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f)),
+                .background(MaterialTheme.colorScheme.primaryContainer),
         )
         Column(
             verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),

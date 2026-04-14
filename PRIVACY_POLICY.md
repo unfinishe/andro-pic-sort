@@ -26,14 +26,13 @@ The App processes photos and media files you explicitly select using Android's S
 
 - **File Access**: You grant permission to access a source folder and target folder via SAF. The App reads file metadata (EXIF data, file timestamps) and file content to determine organization strategy.
 - **Local Processing**: All processing occurs on your device. Files are never transmitted or copied to external servers.
-- **Temporary Data**: The App does not cache, store, or persist data beyond the current session.
+- **Local Settings Storage**: The App stores selected folder URIs and sorting preferences (for example operation mode, date source mode, dry run, and conflict policy) locally on your device so you can continue where you left off.
 
 #### 4. Permissions
 
-The App requests only the minimum permissions necessary:
+The App requests only the minimum access necessary:
 
-- **`READ_EXTERNAL_STORAGE` / SAF Tree Access**: To read photos and media files you select for organizing.
-- **`WRITE_EXTERNAL_STORAGE` / SAF Tree Access**: To copy or move files to your chosen target folder.
+- **Storage Access Framework (SAF) Tree Access**: You explicitly grant folder access for source and target locations. This access is used only to read, copy, or move files for operations you start.
 
 These permissions are used **only** for the operations you explicitly initiate.
 
@@ -46,7 +45,7 @@ The App reads EXIF metadata from image files to extract the date taken. If EXIF 
 
 #### 6. Storage & Backup
 
-- **Android Backup**: If enabled in your Android system settings, the App's preferences (such as last-used folders and operation mode) may be backed up to your Google Account via Android's automatic backup service. You can disable this in Android Settings > Apps > App Permissions.
+- **Android Backup**: Automatic Android backup is disabled for this app (`android:allowBackup="false"`).
 - **No Cloud Sync**: The App does not sync files, metadata, or settings to cloud services.
 
 #### 7. Data Security
@@ -57,7 +56,7 @@ The App reads EXIF metadata from image files to extract the date taken. If EXIF 
 
 #### 8. Data Retention
 
-The App retains no persistent data between sessions. User preferences (folders, operation mode) are stored locally on your device using Android's Preferences DataStore. You can clear this data by uninstalling the App or clearing App data in Android Settings.
+The App does not retain uploaded cloud data and does not transmit data externally. It stores selected folder URIs and user preferences locally on your device using Android Preferences DataStore. You can clear this data by uninstalling the App or clearing App data in Android Settings.
 
 #### 9. Children's Privacy
 
@@ -110,14 +109,13 @@ Die App verarbeitet Fotos und Mediendateien, die du mithilfe von Androids Storag
 
 - **Dateizugriff**: Du gewährst Zugriff auf einen Quellordner und einen Zielordner über SAF. Die App liest Datei-Metadaten (EXIF-Daten, Datei-Zeitstempel) und Dateiinhalte, um die Organisationsstrategie zu bestimmen.
 - **Lokale Verarbeitung**: Alle Verarbeitung findet auf deinem Gerät statt. Dateien werden niemals auf externe Server übertragen oder kopiert.
-- **Temporäre Daten**: Die App speichert oder persistiert keine Daten über die aktuelle Sitzung hinaus.
+- **Lokale Speicherung von Einstellungen**: Die App speichert ausgewählte Ordner-URIs und Sortiereinstellungen (z. B. Betriebsmodus, Datumsquelle, Dry Run und Konfliktregel) lokal auf deinem Gerät, damit du mit den letzten Einstellungen weiterarbeiten kannst.
 
 #### 4. Berechtigungen
 
-Die App fordert nur die notwendigsten Berechtigungen an:
+Die App fordert nur den notwendigsten Zugriff an:
 
-- **`READ_EXTERNAL_STORAGE` / SAF-Zugriff**: Um Fotos und Mediendateien zu lesen, die du zum Organisieren auswählst.
-- **`WRITE_EXTERNAL_STORAGE` / SAF-Zugriff**: Um Dateien in deinen gewählten Zielordner zu kopieren oder zu verschieben.
+- **Storage Access Framework (SAF) Ordnerzugriff**: Du gewährst den Zugriff auf Quell- und Zielordner explizit. Dieser Zugriff wird nur verwendet, um von dir gestartete Sortiervorgänge (Lesen, Kopieren, Verschieben) auszuführen.
 
 Diese Berechtigungen werden **nur** für die Vorgänge verwendet, die du explizit initiierst.
 
@@ -130,7 +128,7 @@ Die App liest EXIF-Metadaten aus Bilddateien, um das Aufnahmedatum zu extrahiere
 
 #### 6. Speicherung & Sicherung
 
-- **Android-Sicherung**: Falls in deinen Android-Systemeinstellungen aktiviert, können die Einstellungen der App (wie zuletzt verwendete Ordner und Betriebsmodus) über Androids automatischen Sicherungsdienst in deinem Google-Konto gesichert werden. Du kannst dies unter Android-Einstellungen > Apps > App-Berechtigungen deaktivieren.
+- **Android-Sicherung**: Die automatische Android-Sicherung ist für diese App deaktiviert (`android:allowBackup="false"`).
 - **Keine Cloud-Synchronisierung**: Die App synchronisiert Dateien, Metadaten oder Einstellungen nicht mit Cloud-Diensten.
 
 #### 7. Datensicherheit
@@ -141,7 +139,7 @@ Die App liest EXIF-Metadaten aus Bilddateien, um das Aufnahmedatum zu extrahiere
 
 #### 8. Datenverweilung
 
-Die App speichert keine persistenten Daten zwischen Sitzungen. Benutzereinstellungen (Ordner, Betriebsmodus) werden lokal auf deinem Gerät mit Androids Preferences DataStore gespeichert. Du kannst diese Daten löschen, indem du die App deinstallierst oder App-Daten unter Android-Einstellungen löscht.
+Die App speichert keine Cloud-Daten und überträgt keine Daten extern. Ausgewählte Ordner-URIs und Benutzereinstellungen werden lokal auf deinem Gerät mit Android Preferences DataStore gespeichert. Du kannst diese Daten löschen, indem du die App deinstallierst oder App-Daten unter Android-Einstellungen löscht.
 
 #### 9. Datenschutz für Kinder
 

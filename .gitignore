@@ -17,6 +17,14 @@ ehthumbs.db
 # Project specific
 .env
 *.log
+release-plan.md
+keystore.properties
+*.jks
+*.keystore
+release-artifacts/
+# Raw Gradle test output – Markdown summaries in test-reports/ are tracked instead
+test-reports/*.xml
+test-reports/*.html
 
 # Android / Gradle
 .gradle/
