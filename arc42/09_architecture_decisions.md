@@ -57,3 +57,9 @@
 - **Why creation time (btime) is not preserved**: The Linux kernel intentionally provides no syscall to write a file's birth/creation time. `utimensat(2)` covers only `atime` and `mtime`. This is a fundamental OS constraint. EXIF capture dates are part of file content and are preserved verbatim.
 - Consequences: `SortReport` exposes `osCopyUsed`, `streamFallbackUsed`, `timestampPreserved`, and `timestampFailed` so the user knows which strategy was applied per run. A copy/move is never aborted due to a strategy or timestamp failure.
 
+## ADR-012 Repair Mode as Secondary Tool (EXIF First, Filename Fallback)
+- Status: Accepted
+- Decision: Implement timestamp repair as a dedicated side tool (BottomSheet entry), not as part of the primary sort flow. Repair source priority is fixed: `EXIF -> filename patterns -> unchanged`.
+- Rationale: Keeps the core UX focused on sorting ("one task - one tool") while providing deterministic recovery for older files affected by stream-copy behavior. Fixed source priority avoids ambiguous repairs and makes outcomes explainable.
+- Consequences: Repair flow has its own report model (`TimestampRepairReport`) and progress state. Built-in pattern list plus one optional custom regex provide flexibility without exposing a full rule engine in MVP.
+

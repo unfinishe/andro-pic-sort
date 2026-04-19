@@ -16,6 +16,9 @@ import de.thomba.andropicsort.settings.SettingsStorage
 import de.thomba.andropicsort.settings.StoredUiSettings
 import de.thomba.andropicsort.settings.UiSettingsStorage
 import de.thomba.andropicsort.sort.AndroidSortUseCase
+import de.thomba.andropicsort.sort.TimestampFileNamePatterns
+import de.thomba.andropicsort.sort.TimestampRepairConfig
+import de.thomba.andropicsort.sort.TimestampRepairUseCase
 import de.thomba.andropicsort.sort.SortConfig
 import de.thomba.andropicsort.sort.SortUseCase
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,6 +33,7 @@ import java.util.Locale
 class MainViewModel(
     application: Application,
     private val sortUseCase: SortUseCase,
+    private val repairUseCase: TimestampRepairUseCase,
     private val settingsStorage: SettingsStorage,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AndroidViewModel(application) {
@@ -42,6 +46,7 @@ class MainViewModel(
                 return MainViewModel(
                     application,
                     AndroidSortUseCase(application, application.contentResolver),
+                    TimestampRepairUseCase(application, application.contentResolver),
                     UiSettingsStorage(application),
                 ) as T
             }
@@ -60,7 +65,26 @@ class MainViewModel(
     }
 
     fun onTargetSelected(uri: Uri) {
-        updateStateAndPersist { it.copy(targetUri = uri, report = null, errorMessage = null) }
+        updateStateAndPersist { state ->
+            val repairRootTracksTarget = state.repairRootUri == null || state.repairRootUri == state.targetUri
+            state.copy(
+                targetUri = uri,
+                repairRootUri = if (repairRootTracksTarget) uri else state.repairRootUri,
+                report = null,
+                errorMessage = null,
+            )
+        }
+    }
+
+    fun onRepairRootSelected(uri: Uri) {
+        updateStateAndPersist { it.copy(repairRootUri = uri, repairReport = null, errorMessage = null) }
+    }
+
+    fun onOpenRepairMode() {
+        updateStateAndPersist { state ->
+            if (state.repairRootUri != null) state
+            else state.copy(repairRootUri = state.targetUri)
+        }
     }
 
     fun onModeChanged(mode: OperationMode) {
@@ -82,6 +106,17 @@ class MainViewModel(
     fun onSortNonImagesChanged(enabled: Boolean) {
         updateStateAndPersist { it.copy(sortNonImages = enabled) }
     }
+
+    fun onRepairDryRunChanged(enabled: Boolean) {
+        updateStateAndPersist { it.copy(repairDryRun = enabled) }
+    }
+
+    fun onRepairCustomPatternChanged(pattern: String) {
+        updateStateAndPersist { it.copy(repairCustomPattern = pattern) }
+    }
+
+    fun availableRepairPatternDetails() =
+        TimestampFileNamePatterns.availablePatternDetails(_uiState.value.repairCustomPattern)
 
     fun startSort() {
         val state = _uiState.value
@@ -105,7 +140,9 @@ class MainViewModel(
             _uiState.update {
                 it.copy(
                     isRunning = true,
+                    isRepairRunning = false,
                     report = null,
+                    repairReport = null,
                     errorMessage = null,
                     progressProcessed = 0,
                     progressTotal = 0,
@@ -136,6 +173,7 @@ class MainViewModel(
                 _uiState.update {
                     it.copy(
                         isRunning = false,
+                        isRepairRunning = false,
                         errorMessage = e.message ?: "unknown_error",
                     )
                 }
@@ -143,26 +181,86 @@ class MainViewModel(
         }
     }
 
+    fun startRepair(): Boolean {
+        val state = _uiState.value
+        if (state.isRunning) return false
+
+        val repairRoot = state.repairRootUri
+        if (repairRoot == null) {
+            _uiState.update { it.copy(errorMessage = "missing_repair_folder") }
+            return false
+        }
+
+        viewModelScope.launch(ioDispatcher) {
+            _uiState.update {
+                it.copy(
+                    isRunning = true,
+                    isRepairRunning = true,
+                    report = null,
+                    repairReport = null,
+                    errorMessage = null,
+                    progressProcessed = 0,
+                    progressTotal = 0,
+                )
+            }
+
+            try {
+                val report = repairUseCase.run(
+                    TimestampRepairConfig(
+                        rootTreeUri = repairRoot,
+                        customPattern = state.repairCustomPattern.takeIf { it.isNotBlank() },
+                        dryRun = state.repairDryRun,
+                    )
+                ) { progress ->
+                    _uiState.update {
+                        it.copy(progressProcessed = progress.processed, progressTotal = progress.total)
+                    }
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isRunning = false,
+                        isRepairRunning = false,
+                        repairReport = report,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isRunning = false,
+                        isRepairRunning = false,
+                        errorMessage = e.message ?: "unknown_error",
+                    )
+                }
+            }
+        }
+        return true
+    }
+
     private fun restoreSettings() {
         viewModelScope.launch(ioDispatcher) {
             val stored = settingsStorage.load()
             val source = stored.sourceUri?.takeIf(::hasPersistedPermission)
             val target = stored.targetUri?.takeIf(::hasPersistedPermission)
+            val repairRoot = stored.repairRootUri?.takeIf(::hasPersistedPermission)
 
             _uiState.update {
                 it.copy(
                     sourceUri = source,
                     targetUri = target,
+                    repairRootUri = repairRoot,
                     mode = stored.mode,
                     conflictPolicy = stored.conflictPolicy,
                     dateSourceMode = stored.dateSourceMode,
                     sortNonImages = stored.sortNonImages,
                     dryRun = stored.dryRun,
+                    repairDryRun = stored.repairDryRun,
+                    repairCustomPattern = stored.repairCustomPattern,
                 )
             }
 
             // Keep storage consistent when a persisted URI is no longer accessible.
-            if (source != stored.sourceUri || target != stored.targetUri) {
+            if (source != stored.sourceUri || target != stored.targetUri || repairRoot != stored.repairRootUri) {
                 settingsStorage.save(_uiState.value.toStoredSettings())
             }
         }
@@ -185,11 +283,14 @@ class MainViewModel(
         return StoredUiSettings(
             sourceUri = sourceUri,
             targetUri = targetUri,
+            repairRootUri = repairRootUri,
             mode = mode,
             conflictPolicy = conflictPolicy,
             dateSourceMode = dateSourceMode,
             sortNonImages = sortNonImages,
             dryRun = dryRun,
+            repairDryRun = repairDryRun,
+            repairCustomPattern = repairCustomPattern,
         )
     }
 }

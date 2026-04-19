@@ -18,6 +18,14 @@
 - **EXIF capture dates are fully preserved**: `DateTimeOriginal` and similar EXIF tags live inside the file content and are copied verbatim regardless of strategy.
 - `SortReport` exposes `osCopyUsed`, `streamFallbackUsed`, `timestampPreserved`, and `timestampFailed` so the user receives explicit per-strategy feedback in the report.
 
+## Timestamp Repair Mode
+- Repair mode is a secondary tool, not part of the main sort run.
+- Repair mode extracts candidate capture/creation datetime with strict priority: **EXIF first**, **filename pattern fallback**.
+- Built-in filename patterns cover common camera/app naming styles (for example `IMG_yyyyMMdd_HHmmss`, `PXL_...`, `yyyyMMdd_HHmmss`, date-only variants).
+- User may provide one additional custom regex pattern with named groups (`year`, `month`, `day`, optional `hour`, `minute`, `second`).
+- UX exposes a "show patterns" action so users can inspect the currently active pattern list before running repair.
+- Repair report includes: repaired/planned/failed, EXIF hits, filename hits, custom-pattern hits, and used pattern frequencies.
+
 ## Logging and Observability
 - Structured logging in debug builds.
 - No sensitive path data in analytics because MVP is offline-only and has no backend telemetry.

@@ -12,6 +12,7 @@ import de.thomba.andropicsort.settings.StoredUiSettings
 import de.thomba.andropicsort.sort.SortConfig
 import de.thomba.andropicsort.sort.SortProgress
 import de.thomba.andropicsort.sort.SortUseCase
+import de.thomba.andropicsort.sort.TimestampRepairUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,6 +60,7 @@ class MainViewModelTest {
 
     private lateinit var app: Application
     private lateinit var fakeSortUseCase: FakeSortUseCase
+    private lateinit var repairUseCase: TimestampRepairUseCase
     private lateinit var fakeSettingsStorage: FakeSettingsStorage
     private lateinit var viewModel: MainViewModel
 
@@ -67,8 +69,9 @@ class MainViewModelTest {
         Dispatchers.setMain(testDispatcher)
         app = ApplicationProvider.getApplicationContext()
         fakeSortUseCase = FakeSortUseCase()
+        repairUseCase = TimestampRepairUseCase(app, app.contentResolver)
         fakeSettingsStorage = FakeSettingsStorage()
-        viewModel = MainViewModel(app, fakeSortUseCase, fakeSettingsStorage, testDispatcher)
+        viewModel = MainViewModel(app, fakeSortUseCase, repairUseCase, fakeSettingsStorage, testDispatcher)
     }
 
     @After
@@ -118,6 +121,60 @@ class MainViewModelTest {
 
         assertEquals("missing_folders", viewModel.uiState.value.errorMessage)
         assertNull("No sort must run", fakeSortUseCase.lastConfig)
+    }
+
+    @Test
+    fun `startRepair with no repair root sets missing_repair_folder error`() = runTest {
+        val started = viewModel.startRepair()
+
+        assertFalse(started)
+        assertEquals("missing_repair_folder", viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `repair controls update and persist`() = runTest {
+        viewModel.onRepairDryRunChanged(false)
+        viewModel.onRepairCustomPatternChanged("(?<year>\\d{4})(?<month>\\d{2})(?<day>\\d{2})")
+        viewModel.onRepairRootSelected(Uri.parse("content://test/repair-root"))
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.repairDryRun)
+        assertEquals(
+            "(?<year>\\d{4})(?<month>\\d{2})(?<day>\\d{2})",
+            viewModel.uiState.value.repairCustomPattern,
+        )
+        assertEquals(Uri.parse("content://test/repair-root"), viewModel.uiState.value.repairRootUri)
+        assertTrue(fakeSettingsStorage.saveWasCalled)
+    }
+
+    @Test
+    fun `onOpenRepairMode defaults repair root to target folder`() = runTest {
+        viewModel.onTargetSelected(Uri.parse("content://test/target"))
+        viewModel.onOpenRepairMode()
+        advanceUntilIdle()
+
+        assertEquals(Uri.parse("content://test/target"), viewModel.uiState.value.repairRootUri)
+    }
+
+    @Test
+    fun `target change keeps repair root in sync while using default target`() = runTest {
+        viewModel.onTargetSelected(Uri.parse("content://test/target-a"))
+        viewModel.onTargetSelected(Uri.parse("content://test/target-b"))
+        advanceUntilIdle()
+
+        assertEquals(Uri.parse("content://test/target-b"), viewModel.uiState.value.targetUri)
+        assertEquals(Uri.parse("content://test/target-b"), viewModel.uiState.value.repairRootUri)
+    }
+
+    @Test
+    fun `target change keeps custom repair root untouched`() = runTest {
+        viewModel.onTargetSelected(Uri.parse("content://test/target-a"))
+        viewModel.onRepairRootSelected(Uri.parse("content://test/custom-repair-root"))
+        viewModel.onTargetSelected(Uri.parse("content://test/target-b"))
+        advanceUntilIdle()
+
+        assertEquals(Uri.parse("content://test/target-b"), viewModel.uiState.value.targetUri)
+        assertEquals(Uri.parse("content://test/custom-repair-root"), viewModel.uiState.value.repairRootUri)
     }
 
     // ── Guard: double-start while running ──────────────────────────────
@@ -274,7 +331,7 @@ class MainViewModelTest {
 
         // Create a fresh ViewModel backed by its own storage; inject testDispatcher
         // so advanceUntilIdle() controls its coroutines.
-        val vm = MainViewModel(app, fakeSortUseCase, freshStorage, testDispatcher)
+        val vm = MainViewModel(app, fakeSortUseCase, repairUseCase, freshStorage, testDispatcher)
         advanceUntilIdle()
 
         // hasPersistedPermission returns false for all URIs in Robolectric (no SAF grants).
