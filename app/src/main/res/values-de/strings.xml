@@ -48,6 +48,12 @@
     <string name="report_title">Bericht</string>
     <string name="report_line">Verarbeitet: %1$d, Kopiert: %2$d, Verschoben: %3$d, Fehler: %4$d, Uebersprungen: %5$d, Geplant: %6$d, Umbenannt: %7$d</string>
     <string name="report_errors_line">Fehlergruppen - Erstellen: %1$d, Kopieren: %2$d, Loeschen: %3$d</string>
+    <string name="report_copy_strategy_os">Kopierstrategie: OS-Kopie (Metadaten erhalten) für alle %1$d Dateien.</string>
+    <string name="report_copy_strategy_mixed">Kopierstrategie: OS-Kopie für %1$d Dateien, Stream-Fallback für %2$d Dateien.</string>
+    <string name="report_copy_strategy_stream">Kopierstrategie: Stream-Kopie (Fallback) für alle Dateien verwendet.</string>
+    <string name="report_timestamp_all_ok">Änderungsdatum bei allen Dateien erfolgreich übernommen.</string>
+    <string name="report_timestamp_partial">Änderungsdatum übernommen: %1$d von %2$d — %3$d konnten nicht wiederhergestellt werden.</string>
+    <string name="report_timestamp_none">Änderungsdatum konnte nicht übernommen werden (Speicherort unterstützt dies nicht).</string>
     <string name="dry_run_report_note">Dry-Run abgeschlossen. Es wurden keine Dateien kopiert oder verschoben.</string>
     <string name="missing_folder_selection">Bitte Quell- und Zielordner auswählen.</string>
     <string name="source_equals_target">Quell- und Zielordner dürfen nicht identisch sein.</string>

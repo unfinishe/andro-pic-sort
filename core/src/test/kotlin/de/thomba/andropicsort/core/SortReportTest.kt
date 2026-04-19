@@ -20,6 +20,10 @@ class SortReportTest {
         assertEquals(0, report.createFailed)
         assertEquals(0, report.copyFailed)
         assertEquals(0, report.deleteFailed)
+        assertEquals(0, report.osCopyUsed)
+        assertEquals(0, report.streamFallbackUsed)
+        assertEquals(0, report.timestampPreserved)
+        assertEquals(0, report.timestampFailed)
         assertFalse(report.dryRun)
         assertEquals(0L, report.durationMillis)
     }
@@ -53,6 +57,10 @@ class SortReportTest {
             createFailed = 1,
             copyFailed = 1,
             deleteFailed = 0,
+            osCopyUsed = 5,
+            streamFallbackUsed = 2,
+            timestampPreserved = 1,
+            timestampFailed = 1,
             dryRun = false,
             durationMillis = 1500L,
         )
@@ -65,7 +73,26 @@ class SortReportTest {
         assertEquals(1, report.createFailed)
         assertEquals(1, report.copyFailed)
         assertEquals(0, report.deleteFailed)
+        assertEquals(5, report.osCopyUsed)
+        assertEquals(2, report.streamFallbackUsed)
+        assertEquals(1, report.timestampPreserved)
+        assertEquals(1, report.timestampFailed)
         assertEquals(1500L, report.durationMillis)
+    }
+
+    @Test
+    fun `osCopyUsed and streamFallbackUsed are independently assignable`() {
+        val report = SortReport(
+            processed = 10, copied = 10, moved = 0, failed = 0, skipped = 0,
+            osCopyUsed = 8,
+            streamFallbackUsed = 2,
+            timestampPreserved = 1,
+            timestampFailed = 1,
+        )
+        assertEquals(8, report.osCopyUsed)
+        assertEquals(2, report.streamFallbackUsed)
+        assertEquals(1, report.timestampPreserved)
+        assertEquals(1, report.timestampFailed)
     }
 
     @Test

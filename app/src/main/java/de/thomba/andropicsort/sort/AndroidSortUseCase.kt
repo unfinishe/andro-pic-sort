@@ -3,6 +3,7 @@ package de.thomba.andropicsort.sort
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.system.Os
 import androidx.documentfile.provider.DocumentFile
 import androidx.exifinterface.media.ExifInterface
 import de.thomba.andropicsort.core.ConflictPolicy
@@ -59,6 +60,10 @@ class AndroidSortUseCase(
         var createFailed = 0
         var copyFailed = 0
         var deleteFailed = 0
+        var osCopyUsed = 0
+        var streamFallbackUsed = 0
+        var timestampPreserved = 0
+        var timestampFailed = 0
 
         fun toReport(dryRun: Boolean, durationMillis: Long) = SortReport(
             processed = processed,
@@ -71,6 +76,10 @@ class AndroidSortUseCase(
             createFailed = createFailed,
             copyFailed = copyFailed,
             deleteFailed = deleteFailed,
+            osCopyUsed = osCopyUsed,
+            streamFallbackUsed = streamFallbackUsed,
+            timestampPreserved = timestampPreserved,
+            timestampFailed = timestampFailed,
             dryRun = dryRun,
             durationMillis = durationMillis,
         )
@@ -203,11 +212,44 @@ class AndroidSortUseCase(
 
         if (targetPlan.wasRenamed && !plannedWasRenamed) c.renamed += 1
 
+        // Resolve real on-disk paths to enable OS-level copy (primary strategy)
+        val sourceRealPath = resolveRealPath(sourceFile.uri, "r")
+        val targetRealPath = resolveRealPath(targetPlan.targetFile.uri, "rw")
+
+        if (sourceRealPath != null && targetRealPath != null) {
+            // ── Primary strategy: OS copy via Files.copy(COPY_ATTRIBUTES) ──────────
+            val osOk = performOsCopy(sourceRealPath, targetRealPath, config.mode)
+            if (osOk) {
+                c.osCopyUsed += 1
+                when (config.mode) {
+                    OperationMode.COPY -> c.copied += 1
+                    OperationMode.MOVE -> c.moved += 1
+                }
+                return
+            }
+            // OS copy failed (e.g. cross-filesystem edge case) — fall through to stream copy
+        }
+
+        // ── Fallback strategy: stream copy ────────────────────────────────────────
+        val sourceLastModifiedMillis = sourceFile.lastModified().takeIf { it > 0 }
+
         val copiedOk = copyContent(sourceFile.uri, targetPlan.targetFile.uri)
         if (!copiedOk) {
             cleanupTarget(targetPlan.targetFile, monthState)
             c.failed += 1; c.copyFailed += 1
             return
+        }
+
+        c.streamFallbackUsed += 1
+
+        // Best-effort mtime restoration for stream-copy fallback
+        if (sourceLastModifiedMillis != null && targetRealPath != null) {
+            val mtimeOk = runCatching {
+                java.io.File(targetRealPath).setLastModified(sourceLastModifiedMillis)
+            }.getOrDefault(false)
+            if (mtimeOk) c.timestampPreserved += 1 else c.timestampFailed += 1
+        } else {
+            c.timestampFailed += 1
         }
 
         when (config.mode) {
@@ -312,6 +354,48 @@ class AndroidSortUseCase(
                 contentResolver.openOutputStream(targetUri, "w")?.use { dst ->
                     src.copyTo(dst)
                 } ?: return false
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Resolves the real on-disk path for a SAF [Uri] by opening a file descriptor and reading
+     * the `/proc/self/fd/{fd}` symlink. Returns null if the provider does not back a real path.
+     */
+    private fun resolveRealPath(uri: Uri, mode: String): String? {
+        return try {
+            contentResolver.openFileDescriptor(uri, mode)?.use { pfd ->
+                Os.readlink("/proc/self/fd/${pfd.fd}")
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Primary copy/move strategy: uses [java.nio.file.Files.copy] with
+     * [java.nio.file.StandardCopyOption.COPY_ATTRIBUTES] so the OS preserves mtime, atime,
+     * and any other attributes the underlying filesystem supports — without manual intervention.
+     *
+     * For MOVE mode: copies with attributes first, then deletes the source.
+     * (The target file already exists as an empty SAF placeholder; REPLACE_EXISTING overwrites it.)
+     *
+     * Returns true on success, false on any error (caller falls back to stream copy).
+     */
+    private fun performOsCopy(sourcePath: String, targetPath: String, mode: OperationMode): Boolean {
+        return try {
+            val src = java.nio.file.Paths.get(sourcePath)
+            val dst = java.nio.file.Paths.get(targetPath)
+            java.nio.file.Files.copy(
+                src, dst,
+                java.nio.file.StandardCopyOption.COPY_ATTRIBUTES,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            )
+            if (mode == OperationMode.MOVE) {
+                java.nio.file.Files.delete(src)
             }
             true
         } catch (_: Exception) {

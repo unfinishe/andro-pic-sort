@@ -48,6 +48,12 @@
     <string name="report_title">Report</string>
     <string name="report_line">Processed: %1$d, Copied: %2$d, Moved: %3$d, Failed: %4$d, Skipped: %5$d, Planned: %6$d, Renamed: %7$d</string>
     <string name="report_errors_line">Error buckets - Create: %1$d, Copy: %2$d, Delete: %3$d</string>
+    <string name="report_copy_strategy_os">Copy strategy: OS copy (metadata preserved) for all %1$d files.</string>
+    <string name="report_copy_strategy_mixed">Copy strategy: OS copy for %1$d files, stream fallback for %2$d files.</string>
+    <string name="report_copy_strategy_stream">Copy strategy: stream copy (fallback) used for all files.</string>
+    <string name="report_timestamp_all_ok">Modification time preserved on all files.</string>
+    <string name="report_timestamp_partial">Modification time preserved: %1$d of %2$d — %3$d could not be restored.</string>
+    <string name="report_timestamp_none">Modification time could not be preserved (storage location does not support it).</string>
     <string name="dry_run_report_note">Dry run finished. No files were copied or moved.</string>
     <string name="missing_folder_selection">Please select source and target folder.</string>
     <string name="source_equals_target">Source and target folder must be different.</string>

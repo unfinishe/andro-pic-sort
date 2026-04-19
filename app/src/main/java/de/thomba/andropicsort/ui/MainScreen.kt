@@ -524,6 +524,38 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
                             report.deleteFailed,
                         )
                     )
+                    // Copy strategy feedback
+                    if (!report.dryRun) {
+                        val strategyText = when {
+                            report.streamFallbackUsed == 0 && report.osCopyUsed > 0 ->
+                                stringResource(R.string.report_copy_strategy_os, report.osCopyUsed)
+                            report.osCopyUsed > 0 ->
+                                stringResource(R.string.report_copy_strategy_mixed, report.osCopyUsed, report.streamFallbackUsed)
+                            report.streamFallbackUsed > 0 ->
+                                stringResource(R.string.report_copy_strategy_stream)
+                            else -> null
+                        }
+                        strategyText?.let { Text(text = it) }
+
+                        // For stream-fallback files: show mtime preservation outcome
+                        if (report.streamFallbackUsed > 0) {
+                            val tsTotal = report.timestampPreserved + report.timestampFailed
+                            val tsText = when {
+                                report.timestampFailed == 0 ->
+                                    stringResource(R.string.report_timestamp_all_ok)
+                                report.timestampPreserved == 0 ->
+                                    stringResource(R.string.report_timestamp_none)
+                                else ->
+                                    stringResource(
+                                        R.string.report_timestamp_partial,
+                                        report.timestampPreserved,
+                                        tsTotal,
+                                        report.timestampFailed,
+                                    )
+                            }
+                            Text(text = tsText)
+                        }
+                    }
                     if (report.dryRun) {
                         Text(text = stringResource(R.string.dry_run_report_note))
                     }

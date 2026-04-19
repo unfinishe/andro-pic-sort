@@ -86,6 +86,8 @@ For setup and Play upload steps, see:
 - Organize files into `YYYY/MM MonthName` (default schema).
 - Resolve filename conflicts by policy: `Rename` (for example `name_1.ext`) or `Overwrite`.
 - Show a final report (processed, copied/moved, failed, skipped, planned, renamed, categorized error buckets).
+- **Preserve original file timestamps**: after every copy or move, the original modification time (`mtime`) is restored on the target file (primary strategy: stream copy + `/proc/self/fd` symlink resolution + `File.setLastModified`; fallback: file is copied without `mtime` restoration if the storage provider does not expose a real path). Note: file-system creation time (`btime`) cannot be set — this is a hard Linux kernel constraint. EXIF capture dates (`DateTimeOriginal` etc.) are part of the file content and are preserved verbatim.
+- Report explicitly shows how many files had their modification time preserved and how many could not be restored.
 
 ## Out of Scope (MVP)
 - Undo functionality.

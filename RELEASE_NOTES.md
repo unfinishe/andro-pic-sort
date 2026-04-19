@@ -1,5 +1,22 @@
 # Release Notes
 
+## Version 1.1.0
+
+**Release Date:** April 19, 2026
+
+### What's New
+
+#### Timestamp Preservation
+- **Original file timestamps are now preserved** using OS-level copy operations by default.
+- The app uses a two-strategy approach per file:
+  - **Primary (OS copy)**: real on-disk paths are resolved for both source and target via the Linux `/proc/self/fd` symlink. `Files.copy(COPY_ATTRIBUTES)` is then used — the OS preserves mtime, atime and all attributes the filesystem supports automatically.
+  - **Fallback (stream copy)**: if the storage provider does not expose a real file-system path (e.g. some OTG or virtual providers), the app falls back to stream copy with a subsequent `File.setLastModified()` call to at least restore the modification time.
+- The report shows exactly how many files were processed with each strategy and, for stream-fallback files, whether modification time was successfully restored.
+
+> **Note on file creation time:** The Linux kernel provides no syscall to write a file's birth/creation time (`btime`). This is a hard OS constraint — no Android app can work around it. **EXIF capture dates** (`DateTimeOriginal`, etc.) are unaffected: they live inside the file content and are copied verbatim by both strategies.
+
+---
+
 ## Version 1.0.5 (Initial Release)
 
 **Release Date:** April 14, 2026
