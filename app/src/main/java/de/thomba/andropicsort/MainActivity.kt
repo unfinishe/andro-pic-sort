@@ -40,10 +40,20 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val repairRootLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.OpenDocumentTree(),
+                    ) { uri ->
+                        uri?.let {
+                            persistPermissions(it)
+                            viewModel.onRepairRootSelected(it)
+                        }
+                    }
+
                     MainScreen(
                         viewModel = viewModel,
                         onPickSource = { sourceLauncher.launch(null) },
                         onPickTarget = { targetLauncher.launch(null) },
+                        onPickRepairRoot = { initialUri -> repairRootLauncher.launch(initialUri) },
                     )
                 }
             }

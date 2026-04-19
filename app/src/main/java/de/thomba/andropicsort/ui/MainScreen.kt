@@ -31,11 +31,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -58,6 +62,8 @@ import de.thomba.andropicsort.R
 import de.thomba.andropicsort.core.ConflictPolicy
 import de.thomba.andropicsort.core.DateSourceMode
 import de.thomba.andropicsort.core.OperationMode
+import de.thomba.andropicsort.sort.TimestampFileNamePatterns
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +71,7 @@ fun MainScreen(
     viewModel: MainViewModel,
     onPickSource: () -> Unit,
     onPickTarget: () -> Unit,
+    onPickRepairRoot: (Uri?) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
@@ -73,9 +80,22 @@ fun MainScreen(
     val isWideLayout = configuration.screenWidthDp >= 820
     val dryRunLabel = stringResource(R.string.dry_run_mode)
     var showAbout by remember { mutableStateOf(false) }
+    var showRepairSheet by remember { mutableStateOf(false) }
+    var showPatternDetails by remember { mutableStateOf(false) }
 
     if (showAbout) {
         AboutDialog(onDismiss = { showAbout = false })
+    }
+
+    if (showRepairSheet) {
+        RepairBottomSheet(
+            state = state,
+            viewModel = viewModel,
+            onPickRepairRoot = onPickRepairRoot,
+            showPatternDetails = showPatternDetails,
+            onTogglePatternDetails = { showPatternDetails = !showPatternDetails },
+            onDismiss = { showRepairSheet = false },
+        )
     }
 
     Scaffold(
@@ -118,7 +138,16 @@ fun MainScreen(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(sectionSpacing),
                     ) {
-                        RunOptionsCard(state, viewModel, dryRunLabel, compact = compactLayout)
+                        RunOptionsCard(
+                            state = state,
+                            viewModel = viewModel,
+                            dryRunLabel = dryRunLabel,
+                            compact = compactLayout,
+                            onOpenRepair = {
+                                viewModel.onOpenRepairMode()
+                                showRepairSheet = true
+                            },
+                        )
                         StatusArea(state, compact = compactLayout)
                     }
                 }
@@ -129,7 +158,16 @@ fun MainScreen(
                 ) {
                     AppIdentityHeader(compact = compactLayout, onAboutClick = { showAbout = true })
                     FoldersCard(state, onPickSource, onPickTarget, compact = compactLayout)
-                    RunOptionsCard(state, viewModel, dryRunLabel, compact = compactLayout)
+                    RunOptionsCard(
+                        state = state,
+                        viewModel = viewModel,
+                        dryRunLabel = dryRunLabel,
+                        compact = compactLayout,
+                        onOpenRepair = {
+                            viewModel.onOpenRepairMode()
+                            showRepairSheet = true
+                        },
+                    )
                     StatusArea(state, compact = compactLayout)
                 }
             }
@@ -299,6 +337,7 @@ private fun RunOptionsCard(
     viewModel: MainViewModel,
     dryRunLabel: String,
     compact: Boolean,
+    onOpenRepair: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -448,8 +487,201 @@ private fun RunOptionsCard(
                     ) {
                         Text(stringResource(R.string.start_sort))
                     }
+
+                    OutlinedButton(
+                        onClick = onOpenRepair,
+                        enabled = !state.isRunning,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(if (compact) 46.dp else 50.dp),
+                        shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Text(stringResource(R.string.open_repair_mode))
+                    }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RepairBottomSheet(
+    state: MainUiState,
+    viewModel: MainViewModel,
+    onPickRepairRoot: (Uri?) -> Unit,
+    showPatternDetails: Boolean,
+    onTogglePatternDetails: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val patternDetails = viewModel.availableRepairPatternDetails()
+    var previewFileName by remember { mutableStateOf("") }
+    var showRegexHelp by remember { mutableStateOf(false) }
+    val preview = TimestampFileNamePatterns.previewCustomPattern(
+        fileName = previewFileName,
+        customPattern = state.repairCustomPattern,
+    )
+    val builtInPreview = TimestampFileNamePatterns.previewBuiltInPattern(previewFileName)
+    val previewFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss") }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.repair_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.repair_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.repair_strategy),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.repair_patterns_applied_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_target_directory),
+                    contentDescription = stringResource(R.string.repair_root_icon_desc),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(text = stringResource(R.string.repair_root_folder), style = MaterialTheme.typography.bodyMedium)
+            }
+            FolderSection(
+                value = state.repairRootUri?.toDisplayText(),
+                buttonLabel = stringResource(R.string.choose_repair_root_folder),
+                iconRes = R.drawable.ic_target_directory,
+                onPick = { onPickRepairRoot(state.repairRootUri ?: state.targetUri) },
+                enabled = !state.isRunning,
+            )
+            OutlinedTextField(
+                value = state.repairCustomPattern,
+                onValueChange = viewModel::onRepairCustomPatternChanged,
+                enabled = !state.isRunning,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.repair_custom_pattern_label)) },
+                placeholder = { Text(stringResource(R.string.repair_custom_pattern_hint)) },
+                singleLine = true,
+            )
+            TextButton(
+                onClick = { showRegexHelp = !showRegexHelp },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.repair_regex_help_toggle))
+            }
+            if (showRegexHelp) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.repair_regex_help_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(R.string.repair_regex_help_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = previewFileName,
+                onValueChange = { previewFileName = it },
+                enabled = !state.isRunning,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.repair_preview_filename_label)) },
+                placeholder = { Text(stringResource(R.string.repair_preview_filename_hint)) },
+                singleLine = true,
+            )
+            val previewText = when {
+                previewFileName.isBlank() -> stringResource(R.string.repair_preview_empty_filename)
+                state.repairCustomPattern.isBlank() -> stringResource(R.string.repair_preview_missing_pattern)
+                !preview.patternValid -> stringResource(R.string.repair_preview_invalid_pattern)
+                preview.extracted == null -> stringResource(R.string.repair_preview_no_match)
+                else -> stringResource(
+                    R.string.repair_preview_match,
+                    preview.extracted.dateTime.format(previewFormatter),
+                )
+            }
+            Text(
+                text = previewText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val builtInPreviewText = when {
+                previewFileName.isBlank() -> stringResource(R.string.repair_builtin_preview_empty_filename)
+                builtInPreview == null -> stringResource(R.string.repair_builtin_preview_no_match)
+                else -> stringResource(
+                    R.string.repair_builtin_preview_match,
+                    builtInPreview.patternLabel,
+                    builtInPreview.dateTime.format(previewFormatter),
+                )
+            }
+            Text(
+                text = builtInPreviewText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = state.repairDryRun,
+                    onCheckedChange = viewModel::onRepairDryRunChanged,
+                    enabled = !state.isRunning,
+                )
+                Text(text = stringResource(R.string.repair_dry_run_label))
+            }
+            TextButton(onClick = onTogglePatternDetails) {
+                Text(stringResource(R.string.repair_show_applied_patterns))
+            }
+            if (showPatternDetails) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    patternDetails.forEach { detail ->
+                        Text(text = "- ${detail.label}", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = detail.example,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 12.dp),
+                        )
+                    }
+                }
+            }
+            Button(
+                onClick = {
+                    if (viewModel.startRepair()) {
+                        onDismiss()
+                    }
+                },
+                enabled = !state.isRunning,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text(stringResource(R.string.repair_start))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -465,7 +697,11 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.sorting_in_progress), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (state.isRepairRunning) stringResource(R.string.repair_in_progress)
+                        else stringResource(R.string.sorting_in_progress),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
                     }
@@ -485,6 +721,65 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
                                 state.progressProcessed,
                                 state.progressTotal,
                             )
+                        )
+                    }
+                }
+            }
+        }
+
+        state.repairReport?.let { report ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                CardAccentHeader(
+                    title = stringResource(R.string.repair_report_title),
+                    accentIconRes = R.drawable.ic_summary,
+                    compact = compact,
+                )
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(
+                            R.string.repair_report_line,
+                            report.processed,
+                            report.repaired,
+                            report.planned,
+                            report.failed,
+                            report.unchangedNoDate,
+                        )
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.repair_report_source_line,
+                            report.exifSource,
+                            report.fileNameSource,
+                            report.customPatternSource,
+                        )
+                    )
+                    if (report.invalidCustomPattern) {
+                        Text(
+                            text = stringResource(R.string.repair_invalid_custom_pattern),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    if (report.mtimeApplyFailed > 0) {
+                        Text(text = stringResource(R.string.repair_mtime_failed, report.mtimeApplyFailed))
+                    }
+                    if (report.usedPatterns.isNotEmpty()) {
+                        Text(text = stringResource(R.string.repair_used_patterns_title))
+                        report.usedPatterns.forEach { used ->
+                            Text(text = "- $used", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (report.dryRun) {
+                        Text(text = stringResource(R.string.repair_dry_run_note))
+                    }
+                    if (report.durationMillis > 0) {
+                        Text(
+                            text = stringResource(R.string.report_duration, formatDuration(report.durationMillis)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -524,6 +819,38 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
                             report.deleteFailed,
                         )
                     )
+                    // Copy strategy feedback
+                    if (!report.dryRun) {
+                        val strategyText = when {
+                            report.streamFallbackUsed == 0 && report.osCopyUsed > 0 ->
+                                stringResource(R.string.report_copy_strategy_os, report.osCopyUsed)
+                            report.osCopyUsed > 0 ->
+                                stringResource(R.string.report_copy_strategy_mixed, report.osCopyUsed, report.streamFallbackUsed)
+                            report.streamFallbackUsed > 0 ->
+                                stringResource(R.string.report_copy_strategy_stream)
+                            else -> null
+                        }
+                        strategyText?.let { Text(text = it) }
+
+                        // For stream-fallback files: show mtime preservation outcome
+                        if (report.streamFallbackUsed > 0) {
+                            val tsTotal = report.timestampPreserved + report.timestampFailed
+                            val tsText = when {
+                                report.timestampFailed == 0 ->
+                                    stringResource(R.string.report_timestamp_all_ok)
+                                report.timestampPreserved == 0 ->
+                                    stringResource(R.string.report_timestamp_none)
+                                else ->
+                                    stringResource(
+                                        R.string.report_timestamp_partial,
+                                        report.timestampPreserved,
+                                        tsTotal,
+                                        report.timestampFailed,
+                                    )
+                            }
+                            Text(text = tsText)
+                        }
+                    }
                     if (report.dryRun) {
                         Text(text = stringResource(R.string.dry_run_report_note))
                     }
@@ -540,6 +867,7 @@ private fun StatusArea(state: MainUiState, compact: Boolean) {
         state.errorMessage?.let { key ->
             val message = when (key) {
                 "missing_folders" -> stringResource(R.string.missing_folder_selection)
+                "missing_repair_folder" -> stringResource(R.string.missing_repair_folder_selection)
                 "source_equals_target" -> stringResource(R.string.source_equals_target)
                 else -> stringResource(R.string.error_prefix, key)
             }

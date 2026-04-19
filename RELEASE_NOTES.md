@@ -1,5 +1,30 @@
 # Release Notes
 
+## Version 1.1.0
+
+**Release Date:** April 19, 2026
+
+### What's New
+
+#### Timestamp Preservation
+- **Original file timestamps are now preserved** using OS-level copy operations by default.
+- The app uses a two-strategy approach per file:
+  - **Primary (OS copy)**: real on-disk paths are resolved for both source and target via the Linux `/proc/self/fd` symlink. `Files.copy(COPY_ATTRIBUTES)` is then used — the OS preserves mtime, atime and all attributes the filesystem supports automatically.
+  - **Fallback (stream copy)**: if the storage provider does not expose a real file-system path (e.g. some OTG or virtual providers), the app falls back to stream copy with a subsequent `File.setLastModified()` call to at least restore the modification time.
+- The report shows exactly how many files were processed with each strategy and, for stream-fallback files, whether modification time was successfully restored.
+
+> **Note on file creation time:** The Linux kernel provides no syscall to write a file's birth/creation time (`btime`). This is a hard OS constraint — no Android app can work around it. **EXIF capture dates** (`DateTimeOriginal`, etc.) are unaffected: they live inside the file content and are copied verbatim by both strategies.
+
+#### Timestamp Repair Mode (New side tool)
+- Added a dedicated repair mode for libraries affected by older stream-copy behavior.
+- Repair mode now uses an explicit repair root folder selector (same SAF picker behavior as the main flow).
+- Default repair root when opening repair mode is the currently selected target folder.
+- Repair strategy is deterministic: **EXIF first**, fallback to **filename pattern extraction**.
+- Integrated built-in filename patterns for common camera/app names and optional custom regex pattern input.
+- Added "show patterns" view and repair report with source counters, failures, and used pattern statistics.
+
+---
+
 ## Version 1.0.5 (Initial Release)
 
 **Release Date:** April 14, 2026
@@ -94,8 +119,8 @@ Found a bug or have a feature request? Please open an issue on GitHub:
 
 ---
 
-**Version:** 1.0.5  
-**Build Date:** April 14, 2026  
+**Version:** 1.1.0  
+**Build Date:** April 19, 2026  
 **Repository:** https://github.com/unfinishe/andro-pic-sort  
 **License:** MIT
 
